@@ -1,0 +1,68 @@
+# ============================================================
+# SEGURANÇA — NUNCA commitar estes arquivos
+# ============================================================
+
+# Variáveis de ambiente e segredos
+.env
+.env.local
+.env.production
+.env.*
+
+# Chaves e certificados
+*.key
+*.pem
+*.cert
+*.p12
+
+# ============================================================
+# SUPABASE
+# ============================================================
+
+# Configuração local do Supabase (contém credenciais)
+supabase/.temp/
+supabase/config.toml
+
+# ============================================================
+# SISTEMA OPERACIONAL
+# ============================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Linux
+*~
+
+# ============================================================
+# EDITORES E IDEs
+# ============================================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# JetBrains (WebStorm, IntelliJ)
+.idea/
+
+# Vim
+*.swp
+*.swo
+
+# ============================================================
+# NODE (caso use o CLI do Supabase via npm)
+# ============================================================
+
+node_modules/
+npm-debug.log*
+
+# ============================================================
+# LOGS
+# ============================================================
+
+*.log
+logs/
