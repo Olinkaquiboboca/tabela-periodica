@@ -1,0 +1,555 @@
+/* ============================================================
+   OVERLAY BASE
+   ============================================================ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  animation: overlayIn 0.2s ease;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ============================================================
+   MODAL BASE
+   ============================================================ */
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ============================================================
+   BOTÃO FECHAR
+   ============================================================ */
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all var(--transition);
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+
+/* ============================================================
+   CABEÇALHO DO MODAL DE ELEMENTO
+   ============================================================ */
+.modal-element-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-right: 40px; /* espaço para o botão fechar */
+}
+
+.modal-element-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  padding: 6px;
+}
+
+.badge-number {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.badge-symbol {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--modal-cat-color, var(--accent));
+  text-shadow: 0 0 20px color-mix(in srgb, var(--modal-cat-color, var(--accent)) 60%, transparent);
+}
+
+.modal-element-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-element-info h2 {
+  font-family: var(--font-sans);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.category-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--modal-cat-color, var(--accent)) 15%, transparent);
+  color: var(--modal-cat-color, var(--accent));
+  border: 1px solid color-mix(in srgb, var(--modal-cat-color, var(--accent)) 30%, transparent);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   IMAGEM DO ELEMENTO
+   ============================================================ */
+.modal-image-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.modal-element-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.3s ease;
+}
+
+.modal-image-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-raised);
+}
+
+.placeholder-symbol {
+  font-family: var(--font-mono);
+  font-size: 80px;
+  font-weight: 700;
+  color: var(--modal-cat-color, var(--text-dim));
+  opacity: 0.15;
+  user-select: none;
+}
+
+/* ============================================================
+   FORMULÁRIO DE NOME
+   ============================================================ */
+.modal-form {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.input-wrapper {
+  display: flex;
+  gap: 8px;
+}
+
+.input-wrapper input {
+  flex: 1;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  padding: 10px 14px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  outline: none;
+  min-width: 0;
+}
+
+.input-wrapper input::placeholder { color: var(--text-dim); }
+
+.input-wrapper input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.input-wrapper input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-verify {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.btn-verify:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-verify.verified {
+  border-color: var(--success);
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+}
+
+.feedback-msg {
+  display: block;
+  font-size: 12px;
+  margin-top: 8px;
+  min-height: 18px;
+  transition: all 0.2s ease;
+}
+
+.feedback-msg.valid   { color: var(--success); }
+.feedback-msg.invalid { color: var(--danger); }
+
+/* ============================================================
+   BOTÃO PRINCIPAL DO MODAL
+   ============================================================ */
+.modal-actions {
+  margin-top: 4px;
+}
+
+.btn-advance {
+  width: 100%;
+  background: var(--modal-cat-color, var(--accent));
+  border: none;
+  border-radius: var(--radius);
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: #060a12;
+}
+
+.btn-advance:not(:disabled):hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--modal-cat-color, var(--accent)) 40%, transparent);
+  transform: translateY(-1px);
+}
+
+.btn-advance:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-advance-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-advance-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.btn-advance-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* ============================================================
+   MENSAGENS DE ESTADO
+   ============================================================ */
+.modal-taken, .modal-mine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 12px;
+}
+
+.modal-taken {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  color: var(--danger);
+}
+
+.modal-mine {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+}
+
+.taken-icon, .mine-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   MODAL DE CONCLUSÃO
+   ============================================================ */
+.modal-conclude {
+  max-width: 480px;
+}
+
+.conclude-title {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  padding-right: 40px;
+}
+
+.conclude-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.conclude-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.conclude-element-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.conclude-element-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--card-color, var(--accent));
+}
+
+.conclude-card-number {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.conclude-card-symbol {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--card-color, var(--accent));
+  line-height: 1;
+}
+
+.conclude-card-name {
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================
+   ÁREA DE CONFIRMAÇÃO
+   ============================================================ */
+.confirm-area {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.confirm-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.warning-icon {
+  font-size: 16px;
+  color: #ffa94d;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.confirm-warning strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.confirm-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-confirm-yes {
+  flex: 1;
+  background: var(--success);
+  color: #060a12;
+  border: none;
+  border-radius: var(--radius);
+  padding: 11px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-confirm-yes:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 20px rgba(81, 207, 102, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-confirm-no {
+  flex: 1;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 11px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-confirm-no:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+/* ============================================================
+   ÁREA DE PDF
+   ============================================================ */
+.pdf-area {
+  padding-top: 20px;
+  text-align: center;
+}
+
+.pdf-success {
+  margin-bottom: 20px;
+}
+
+.pdf-checkmark {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  border: 2px solid var(--success);
+  color: var(--success);
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.pdf-success h3 {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.pdf-success p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.pdf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: #060a12;
+  text-decoration: none;
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  transition: all var(--transition);
+}
+
+.pdf-link:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 20px var(--accent-glow);
+  transform: translateY(-1px);
+}

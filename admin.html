@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Tabela Periódica</title>
+
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' https://cdn.jsdelivr.net;
+    connect-src 'self' https://hrvleytimzrysircbwao.supabase.co;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    frame-ancestors 'none';
+  ">
+
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <!-- Impede indexação do painel admin por buscadores -->
+  <meta name="robots" content="noindex, nofollow">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body style="padding-top:0">
+
+  <!-- ── TELA DE LOGIN ─────────────────────────────────────── -->
+  <div id="login-section" class="admin-login-wrap">
+    <div class="admin-login-card">
+      <h1>⬡ Admin</h1>
+      <p>Painel do professor — acesso restrito</p>
+
+      <div class="admin-field">
+        <label for="admin-email">E-mail</label>
+        <input type="email" id="admin-email" autocomplete="email" placeholder="professor@escola.edu.br">
+      </div>
+
+      <div class="admin-field">
+        <label for="admin-password">Senha</label>
+        <input type="password" id="admin-password" autocomplete="current-password">
+      </div>
+
+      <button class="admin-login-btn" id="btn-admin-login">Entrar</button>
+      <span id="login-error"></span>
+    </div>
+  </div>
+
+  <!-- ── PAINEL ADMIN ──────────────────────────────────────── -->
+  <div id="admin-panel" class="hidden" style="display:none">
+    <div class="admin-layout">
+
+      <!-- Sidebar -->
+      <aside class="admin-sidebar">
+        <div class="admin-logo">
+          ⬡ Tabela Periódica
+          <small>PAINEL DO PROFESSOR</small>
+        </div>
+
+        <nav class="admin-nav">
+          <button class="admin-nav-item active" data-section="overview">
+            📊 Visão Geral
+          </button>
+          <button class="admin-nav-item" data-section="students">
+            👥 Alunos
+          </button>
+          <button class="admin-nav-item" data-section="choices">
+            ⬡ Escolhas
+          </button>
+          <button class="admin-nav-item" data-section="elements">
+            🖼 Elementos
+          </button>
+        </nav>
+
+        <button class="admin-logout-btn" id="btn-logout">Sair</button>
+      </aside>
+
+      <!-- Conteúdo principal -->
+      <main class="admin-main">
+
+        <!-- VISÃO GERAL -->
+        <section id="section-overview" class="admin-content-section">
+          <div class="admin-section-title">Visão Geral da Turma</div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="stat-students">—</div>
+              <div class="stat-label">Alunos cadastrados</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-with-choices">—</div>
+              <div class="stat-label">Com escolhas iniciadas</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-complete">—</div>
+              <div class="stat-label">Com 4 elementos (completo)</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-elements-taken">—</div>
+              <div class="stat-label">Elementos ocupados</div>
+            </div>
+          </div>
+
+          <div class="admin-section-title">Últimas Escolhas</div>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Aluno</th>
+                <th>Elemento</th>
+                <th>Símbolo</th>
+                <th>Horário</th>
+              </tr>
+            </thead>
+            <tbody id="recent-choices-tbody">
+              <tr><td colspan="4" style="color:var(--text-muted);padding:20px">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ALUNOS -->
+        <section id="section-students" class="admin-content-section hidden">
+          <div class="admin-section-title">Gerenciar Alunos</div>
+
+          <div class="add-student-form">
+            <input
+              type="text"
+              id="new-student-name"
+              placeholder="Nome completo do aluno (exatamente como irão digitar)"
+              autocomplete="off"
+            >
+            <button id="btn-add-student">Adicionar</button>
+          </div>
+
+          <div style="margin-bottom:12px;font-size:13px;color:var(--text-muted)">
+            Os nomes são verificados sem distinção de maiúsculas/minúsculas.
+            Use o nome como está no diário de classe.
+          </div>
+
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Status de Escolha</th>
+                <th>Elementos (nº)</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody id="students-tbody">
+              <tr><td colspan="4" style="color:var(--text-muted);padding:20px">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ESCOLHAS -->
+        <section id="section-choices" class="admin-content-section hidden">
+          <div class="admin-section-title">Mapa de Escolhas</div>
+
+          <div style="margin-bottom:20px;font-size:13px;color:var(--text-muted)">
+            Visualização de todos os elementos e quem os escolheu.
+          </div>
+
+          <div id="choices-map" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">
+            <!-- Preenchido pelo JS -->
+          </div>
+        </section>
+
+        <!-- ELEMENTOS (instruções de upload) -->
+        <section id="section-elements" class="admin-content-section hidden">
+          <div class="admin-section-title">Configuração de Imagens</div>
+
+          <div class="elements-upload-info">
+            <p style="margin-bottom:12px;font-weight:600;color:var(--text)">Como configurar as imagens no Cloudinary:</p>
+
+            <p style="margin-bottom:8px">
+              1. Acesse <code>cloudinary.com</code> e faça upload das 118 imagens
+              na pasta <code>elementos/</code>.
+            </p>
+            <p style="margin-bottom:8px">
+              2. Use a nomenclatura: <code>elemento_001.jpg</code>, <code>elemento_002.jpg</code>, etc.
+            </p>
+            <p style="margin-bottom:8px">
+              3. Em <strong>Settings → Security → Allowed fetch domains</strong>, adicione
+              <code>https://Olinkaquiboboca.github.io</code>.
+            </p>
+            <p style="margin-bottom:8px">
+              4. Use URLs com transformações para qualidade otimizada:
+              <br><code>https://res.cloudinary.com/dijqcsy3r/image/upload/w_800,h_800,c_fill,q_90/elementos/elemento_001.jpg</code>
+            </p>
+            <p>
+              5. Insira estas URLs na tabela <code>elements</code> via SQL Editor:
+            </p>
+          </div>
+
+          <pre style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);overflow-x:auto;margin-bottom:20px">INSERT INTO elements (number, symbol, name_pt, category, cloudinary_url)
+VALUES
+  (1, 'H', 'Hidrogênio', 'nao-metal',
+   'https://res.cloudinary.com/dijqcsy3r/image/upload/w_800,h_800,c_fill,q_90/elementos/elemento_001.jpg'),
+  (2, 'He', 'Hélio', 'gas-nobre',
+   'https://res.cloudinary.com/dijqcsy3r/image/upload/w_800,h_800,c_fill,q_90/elementos/elemento_002.jpg')
+  -- ... continua para os 118 elementos
+;</pre>
+
+          <div class="admin-section-title" style="margin-top:24px">Status das Imagens</div>
+
+          <div id="elements-status" style="color:var(--text-muted);font-size:13px">
+            Carregando status…
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

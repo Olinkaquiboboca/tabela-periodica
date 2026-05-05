@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tabela Periódica — Turma</title>
+
+  <!--
+    SEGURANÇA: Content Security Policy via meta tag.
+    GitHub Pages não suporta headers HTTP customizados.
+    AJUSTE as URLs para os seus projetos reais antes do deploy.
+  -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' https://cdn.jsdelivr.net https://unpkg.com;
+    connect-src 'self' https://hrvleytimzrysircbwao.supabase.co https://res.cloudinary.com;
+    img-src 'self' https://res.cloudinary.com data: blob:;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    frame-ancestors 'none';
+  ">
+
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/table.css">
+  <link rel="stylesheet" href="css/modal.css">
+</head>
+<body>
+
+  <!-- BARRA FLUTUANTE -->
+  <header id="floating-bar" class="floating-bar" aria-label="Barra de status">
+    <div class="bar-brand">
+      <span class="bar-title">Tabela Periódica</span>
+      <span class="bar-subtitle">escolha seus elementos</span>
+    </div>
+
+    <div class="bar-center">
+      <div class="session-code-wrapper" title="Seu código de sessão">
+        <span class="session-code-label">SESSÃO</span>
+        <span id="session-code-display" class="session-code-value">···-···</span>
+      </div>
+    </div>
+
+    <div class="bar-right">
+      <div id="choice-counter" class="counter" aria-live="polite">
+        <div class="counter-pips">
+          <span class="pip" id="pip-1"></span>
+          <span class="pip" id="pip-2"></span>
+          <span class="pip" id="pip-3"></span>
+          <span class="pip" id="pip-4"></span>
+        </div>
+        <span class="counter-label"><span id="count-current">0</span>/4 elementos</span>
+      </div>
+      <button id="btn-conclude" class="conclude-btn" disabled aria-disabled="true">
+        <span class="conclude-icon">✓</span>
+        Concluir
+      </button>
+    </div>
+  </header>
+
+  <!-- LEGENDA DE CATEGORIAS -->
+  <div class="legend-strip" aria-label="Legenda de categorias">
+    <div class="legend-scroll">
+      <span class="legend-item cat-alcali">Álcali</span>
+      <span class="legend-item cat-alcalino-terroso">Alc. Terroso</span>
+      <span class="legend-item cat-metal-transicao">M. Transição</span>
+      <span class="legend-item cat-metal-pos-transicao">M. Pós-Trans.</span>
+      <span class="legend-item cat-semimetal">Semimetal</span>
+      <span class="legend-item cat-nao-metal">Não-Metal</span>
+      <span class="legend-item cat-halogenio">Halogênio</span>
+      <span class="legend-item cat-gas-nobre">Gás Nobre</span>
+      <span class="legend-item cat-lantanideo">Lantanídeo</span>
+      <span class="legend-item cat-actinideo">Actinídeo</span>
+    </div>
+  </div>
+
+  <!-- ÁREA DA TABELA -->
+  <main id="table-container" class="table-container">
+    <div id="table-bg-image" class="table-bg" aria-hidden="true"></div>
+    <div id="periodic-table" class="periodic-table" role="grid" aria-label="Tabela periódica interativa">
+      <!-- Células geradas dinamicamente pelo JS -->
+    </div>
+
+    <!-- Indicador da série dos lantanídeos/actinídeos -->
+    <div class="series-labels" aria-hidden="true">
+      <div class="series-label" style="grid-row:9;grid-column:1/3">
+        <span>57–71</span>
+        <small>Lantanídeos</small>
+      </div>
+      <div class="series-label" style="grid-row:10;grid-column:1/3">
+        <span>89–103</span>
+        <small>Actinídeos</small>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL DE ELEMENTO -->
+  <div id="element-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-element-name">
+    <div id="element-modal" class="modal">
+      <button id="modal-close" class="modal-close" aria-label="Fechar modal">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M4 4l12 12M16 4L4 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <div class="modal-element-header">
+        <div class="modal-element-badge">
+          <span id="modal-element-number" class="badge-number"></span>
+          <span id="modal-element-symbol" class="badge-symbol"></span>
+        </div>
+        <div class="modal-element-info">
+          <h2 id="modal-element-name"></h2>
+          <span id="modal-element-category" class="category-pill"></span>
+        </div>
+      </div>
+
+      <div class="modal-image-container">
+        <img id="modal-element-image" src="" alt="" class="modal-element-img" loading="lazy">
+        <div class="modal-image-placeholder" id="modal-image-placeholder">
+          <div class="placeholder-symbol" id="placeholder-symbol-text"></div>
+        </div>
+      </div>
+
+      <div class="modal-form" id="modal-form-section">
+        <label for="input-student-name" class="form-label">Seu nome completo</label>
+        <div class="input-wrapper">
+          <input
+            type="text"
+            id="input-student-name"
+            autocomplete="name"
+            placeholder="Como está na lista da turma"
+            aria-describedby="name-feedback"
+            spellcheck="false"
+          >
+          <button id="btn-verify-name" class="btn-verify" type="button">Verificar</button>
+        </div>
+        <span id="name-feedback" class="feedback-msg" aria-live="polite"></span>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btn-advance" class="btn-advance" disabled aria-disabled="true">
+          <span class="btn-advance-inner">
+            <span class="btn-advance-icon">⊕</span>
+            Escolher este elemento
+            <span class="btn-advance-count" id="btn-count-display">(0/4)</span>
+          </span>
+        </button>
+      </div>
+
+      <div id="modal-taken-msg" class="modal-taken hidden">
+        <span class="taken-icon">⊗</span>
+        Este elemento já foi escolhido por outro aluno.
+      </div>
+
+      <div id="modal-mine-msg" class="modal-mine hidden">
+        <span class="mine-icon">✓</span>
+        Você já escolheu este elemento!
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONCLUSÃO -->
+  <div id="conclude-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="conclude-title">
+    <div id="conclude-modal" class="modal modal-conclude">
+      <button id="conclude-close" class="modal-close" aria-label="Fechar">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M4 4l12 12M16 4L4 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <h2 id="conclude-title" class="conclude-title">Seus 4 elementos</h2>
+      <p class="conclude-subtitle" id="conclude-student-name"></p>
+
+      <div id="conclude-elements-list" class="conclude-list">
+        <!-- Preenchido pelo JS -->
+      </div>
+
+      <div id="conclude-confirm-area" class="confirm-area">
+        <p class="confirm-warning">
+          <span class="warning-icon">⚠</span>
+          Esta ação <strong>não pode ser desfeita</strong>. Você confirma sua seleção?
+        </p>
+        <div class="confirm-btns">
+          <button id="btn-confirm-yes" class="btn-confirm-yes">Confirmar seleção</button>
+          <button id="btn-confirm-no" class="btn-confirm-no">Voltar e editar</button>
+        </div>
+      </div>
+
+      <div id="pdf-download-area" class="pdf-area hidden">
+        <div class="pdf-success">
+          <div class="pdf-checkmark">✓</div>
+          <h3>Seleção confirmada!</h3>
+          <p>Seu PDF foi gerado com as 4 imagens para impressão.</p>
+        </div>
+        <a id="pdf-download-link" href="#" class="pdf-link" download="meus-elementos.pdf">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          Baixar PDF para impressão
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST DE CONCLUSÃO -->
+  <div id="completion-toast" class="completion-toast" role="status" aria-live="polite"></div>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loading-overlay" class="loading-overlay" aria-busy="true" aria-label="Carregando">
+    <div class="loading-content">
+      <div class="loading-logo">
+        <span>H</span><span>e</span>
+      </div>
+      <div class="loading-bar"><div class="loading-fill"></div></div>
+      <p class="loading-text">Inicializando sessão…</p>
+    </div>
+  </div>
+
+  <!-- CDNs -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/table.js"></script>
+  <script src="js/modal.js"></script>
+  <script src="js/realtime.js"></script>
+  <script src="js/pdf.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+/* ============================================================
+   CONTAINER DA TABELA
+   ============================================================ */
+.table-container {
+  position: relative;
+  padding: 20px 16px 32px;
+  overflow-x: auto;
+  min-height: calc(100vh - 88px);
+  z-index: 1;
+}
+
+.table-bg {
+  position: absolute;
+  top: 20px; left: 16px; right: 16px; bottom: 32px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.04;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 39px,
+    rgba(100, 140, 200, 0.3) 39px,
+    rgba(100, 140, 200, 0.3) 40px
+  ),
+  repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 39px,
+    rgba(100, 140, 200, 0.3) 39px,
+    rgba(100, 140, 200, 0.3) 40px
+  );
+}
+
+/* ============================================================
+   GRID PRINCIPAL DA TABELA
+   ============================================================ */
+.periodic-table {
+  display: grid;
+  grid-template-columns: repeat(18, minmax(52px, 1fr));
+  grid-template-rows: repeat(10, 1fr);
+  gap: 3px;
+  min-width: 980px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================================
+   CÉLULA DE ELEMENTO
+   ============================================================ */
+.element-cell {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 5px;
+  padding: 5px 4px 4px;
+  cursor: pointer;
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.15s ease,
+    z-index 0s;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
+  user-select: none;
+}
+
+.element-cell:hover {
+  transform: scale(1.18);
+  z-index: 10;
+  box-shadow:
+    0 6px 24px rgba(0, 0, 0, 0.6),
+    0 0 0 1px var(--cell-color, rgba(255,255,255,0.2));
+}
+
+/* Brilho no hover baseado na cor da categoria */
+.element-cell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.07) 0%, transparent 60%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.element-cell:hover::after {
+  opacity: 1;
+}
+
+/* ============================================================
+   CORES POR CATEGORIA
+   ============================================================ */
+.cat-alcali              { --cell-color: var(--cat-alcali);              background: color-mix(in srgb, var(--cat-alcali) 12%, var(--bg-card));              border-color: color-mix(in srgb, var(--cat-alcali) 35%, transparent); }
+.cat-alcalino-terroso    { --cell-color: var(--cat-alcalino-terroso);    background: color-mix(in srgb, var(--cat-alcalino-terroso) 12%, var(--bg-card));    border-color: color-mix(in srgb, var(--cat-alcalino-terroso) 35%, transparent); }
+.cat-lantanideo          { --cell-color: var(--cat-lantanideo);          background: color-mix(in srgb, var(--cat-lantanideo) 12%, var(--bg-card));          border-color: color-mix(in srgb, var(--cat-lantanideo) 35%, transparent); }
+.cat-actinideo           { --cell-color: var(--cat-actinideo);           background: color-mix(in srgb, var(--cat-actinideo) 12%, var(--bg-card));           border-color: color-mix(in srgb, var(--cat-actinideo) 35%, transparent); }
+.cat-metal-transicao     { --cell-color: var(--cat-metal-transicao);     background: color-mix(in srgb, var(--cat-metal-transicao) 12%, var(--bg-card));     border-color: color-mix(in srgb, var(--cat-metal-transicao) 35%, transparent); }
+.cat-metal-pos-transicao { --cell-color: var(--cat-metal-pos-transicao); background: color-mix(in srgb, var(--cat-metal-pos-transicao) 12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-metal-pos-transicao) 35%, transparent); }
+.cat-semimetal           { --cell-color: var(--cat-semimetal);           background: color-mix(in srgb, var(--cat-semimetal) 12%, var(--bg-card));           border-color: color-mix(in srgb, var(--cat-semimetal) 35%, transparent); }
+.cat-nao-metal           { --cell-color: var(--cat-nao-metal);           background: color-mix(in srgb, var(--cat-nao-metal) 12%, var(--bg-card));           border-color: color-mix(in srgb, var(--cat-nao-metal) 35%, transparent); }
+.cat-halogenio           { --cell-color: var(--cat-halogenio);           background: color-mix(in srgb, var(--cat-halogenio) 12%, var(--bg-card));           border-color: color-mix(in srgb, var(--cat-halogenio) 35%, transparent); }
+.cat-gas-nobre           { --cell-color: var(--cat-gas-nobre);           background: color-mix(in srgb, var(--cat-gas-nobre) 12%, var(--bg-card));           border-color: color-mix(in srgb, var(--cat-gas-nobre) 35%, transparent); }
+
+/* Hover: intensifica a cor */
+.element-cell:hover.cat-alcali              { background: color-mix(in srgb, var(--cat-alcali) 30%, var(--bg-card)); }
+.element-cell:hover.cat-alcalino-terroso    { background: color-mix(in srgb, var(--cat-alcalino-terroso) 30%, var(--bg-card)); }
+.element-cell:hover.cat-lantanideo          { background: color-mix(in srgb, var(--cat-lantanideo) 30%, var(--bg-card)); }
+.element-cell:hover.cat-actinideo           { background: color-mix(in srgb, var(--cat-actinideo) 30%, var(--bg-card)); }
+.element-cell:hover.cat-metal-transicao     { background: color-mix(in srgb, var(--cat-metal-transicao) 30%, var(--bg-card)); }
+.element-cell:hover.cat-metal-pos-transicao { background: color-mix(in srgb, var(--cat-metal-pos-transicao) 30%, var(--bg-card)); }
+.element-cell:hover.cat-semimetal           { background: color-mix(in srgb, var(--cat-semimetal) 30%, var(--bg-card)); }
+.element-cell:hover.cat-nao-metal           { background: color-mix(in srgb, var(--cat-nao-metal) 30%, var(--bg-card)); }
+.element-cell:hover.cat-halogenio           { background: color-mix(in srgb, var(--cat-halogenio) 30%, var(--bg-card)); }
+.element-cell:hover.cat-gas-nobre           { background: color-mix(in srgb, var(--cat-gas-nobre) 30%, var(--bg-card)); }
+
+/* ============================================================
+   CONTEÚDO DA CÉLULA
+   ============================================================ */
+.cell-number {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-muted);
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.cell-symbol {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  margin: 1px 0;
+  color: var(--cell-color, var(--text));
+  text-shadow: 0 0 12px color-mix(in srgb, var(--cell-color, transparent) 50%, transparent);
+}
+
+.cell-name {
+  display: block;
+  font-size: 6.5px;
+  color: var(--text-muted);
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* ============================================================
+   ESTADOS DE ESCOLHA
+   ============================================================ */
+.element-cell.chosen-mine {
+  cursor: default;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent), inset 0 0 12px rgba(77, 171, 247, 0.15);
+}
+
+.element-cell.chosen-mine .cell-symbol {
+  color: var(--accent) !important;
+  text-shadow: 0 0 16px var(--accent-glow);
+}
+
+/* Checkmark no canto do elemento escolhido */
+.element-cell.chosen-mine::before {
+  content: '✓';
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  font-size: 8px;
+  color: var(--accent);
+  font-weight: 700;
+  z-index: 3;
+  line-height: 1;
+}
+
+.element-cell.chosen-other {
+  opacity: 0.2;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Ícone de ocupado */
+.element-cell.chosen-other::before {
+  content: '⊗';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 18px;
+  color: var(--danger);
+  opacity: 0.6;
+  z-index: 3;
+}
+
+/* Máscara reveladora */
+.element-mask {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.8s ease;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ============================================================
+   SHAKE ANIMATION (elemento já ocupado)
+   ============================================================ */
+@keyframes shake {
+  0%, 100% { transform: translateX(0) scale(1); }
+  20%       { transform: translateX(-5px) scale(1.05); }
+  40%       { transform: translateX(4px) scale(1.05); }
+  60%       { transform: translateX(-3px) scale(1.02); }
+  80%       { transform: translateX(2px) scale(1.01); }
+}
+
+.element-cell.shake {
+  animation: shake 0.35s ease;
+  border-color: var(--danger) !important;
+}
+
+/* ============================================================
+   LABELS DAS SÉRIES (lantanídeos/actinídeos)
+   ============================================================ */
+.series-labels {
+  display: grid;
+  grid-template-columns: repeat(18, minmax(52px, 1fr));
+  gap: 3px;
+  min-width: 980px;
+  margin-top: 3px;
+}
+
+.series-label {
+  grid-column: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 2;
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+  border-radius: 5px;
+  gap: 2px;
+  opacity: 0.5;
+}
+
+.series-label span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.series-label small {
+  font-size: 8px;
+  color: var(--text-dim);
+}
+
+/* ============================================================
+   ENTRADA ANIMADA DAS CÉLULAS
+   ============================================================ */
+@keyframes cellFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.element-cell {
+  animation: cellFadeIn 0.3s ease both;
+}
