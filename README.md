@@ -1,7 +1,7 @@
 # Tabela Periódica Interativa — Sistema de Sala de Aula
 
 Site onde cada aluno escolhe exatamente 4 elementos da tabela periódica para imprimir.
-Cada elemento só pode ser escolhido por um aluno (exclusividade absoluta).
+Cada elemento só pode ser escolhido por um aluno (exclusividade absoluta). AI DENTO
 
 ---
 
