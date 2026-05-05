@@ -22,9 +22,11 @@ const Session = (() => {
     try {
       const res = await fetch(`${CONFIG.EDGE_FUNCTIONS_URL}/create-session`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // Body vazio — o IP vem do header HTTP da requisição,
-        "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,  // ← adiciona isso
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+        },
+        // Body vazio — o IP vem do header HTTP da requisição
         body: JSON.stringify({}),
       });
 
@@ -103,8 +105,10 @@ const Session = (() => {
     try {
       const res = await fetch(`${CONFIG.EDGE_FUNCTIONS_URL}/verify-student`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,  // ← adiciona isso
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+        },
         body: JSON.stringify({
           student_name: name.trim(),
           session_id:   _sessionId,
@@ -153,8 +157,10 @@ const Session = (() => {
     try {
       const res = await fetch(`${CONFIG.EDGE_FUNCTIONS_URL}/choose-element`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,  // ← adiciona isso
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+        },
         body: JSON.stringify({
           session_id:     _sessionId,
           element_number: elementNumber,
