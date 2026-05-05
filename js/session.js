@@ -24,7 +24,7 @@ const Session = (() => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // Body vazio — o IP vem do header HTTP da requisição,
-        // nunca do body enviado pelo cliente.
+        "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,  // ← adiciona isso
         body: JSON.stringify({}),
       });
 
@@ -104,6 +104,7 @@ const Session = (() => {
       const res = await fetch(`${CONFIG.EDGE_FUNCTIONS_URL}/verify-student`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,  // ← adiciona isso
         body: JSON.stringify({
           student_name: name.trim(),
           session_id:   _sessionId,
@@ -153,6 +154,7 @@ const Session = (() => {
       const res = await fetch(`${CONFIG.EDGE_FUNCTIONS_URL}/choose-element`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,  // ← adiciona isso
         body: JSON.stringify({
           session_id:     _sessionId,
           element_number: elementNumber,
