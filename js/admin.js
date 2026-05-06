@@ -355,14 +355,16 @@ function _buildElementCard(el) {
   const hasPic   = !!url;
   const isUpping = _uploadingElement === el.number;
 
-  // Se tem imagem, mostra thumbnail; se não tem, mostra placeholder com símbolo
+  // Se tem imagem, mostra thumbnail; se não tem, mostra placeholder com símbolo.
+  // IMPORTANTE: sem onerror= inline — isso viola a CSP (script-src-attr bloqueado).
+  // O fallback de imagem quebrada é tratado por um listener com captura na grade.
   const imageContent = hasPic
     ? `<img
         src="${url}"
         alt="${el.name_pt}"
         class="elem-card-img"
         loading="lazy"
-        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+        data-fallback-symbol="${el.symbol}"
        >
        <div class="elem-card-placeholder" style="display:none">
          <span>${el.symbol}</span>
@@ -380,9 +382,13 @@ function _buildElementCard(el) {
 
   const btnClass = isUpping ? "elem-upload-btn uploading" : "elem-upload-btn";
 
+  // Nenhum onclick= inline — todos os cliques são capturados por delegação de eventos
+  // no listener da grade (ver seção de event listeners no DOMContentLoaded abaixo).
+  // A classe .elem-upload-trigger marca os elementos clicáveis; data-number no card
+  // raiz identifica qual elemento foi acionado.
   return `
     <div class="elem-card ${hasPic ? "has-image" : "no-image"}" data-number="${el.number}">
-      <div class="elem-card-image-wrap" onclick="triggerUpload(${el.number})">
+      <div class="elem-card-image-wrap elem-upload-trigger">
         ${imageContent}
         <div class="elem-card-overlay">
           <span>${hasPic ? "Trocar" : "Adicionar"}</span>
@@ -395,11 +401,7 @@ function _buildElementCard(el) {
         <div class="elem-card-name">${el.name_pt}</div>
       </div>
 
-      <button
-        class="${btnClass}"
-        onclick="triggerUpload(${el.number})"
-        ${isUpping ? "disabled" : ""}
-      >${btnText}</button>
+      <button class="${btnClass} elem-upload-trigger" ${isUpping ? "disabled" : ""}>${btnText}</button>
     </div>
   `;
 }
@@ -592,6 +594,37 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".elements-filter-btn").forEach(btn => {
     btn.addEventListener("click", () => setElementsFilter(btn.dataset.filter));
   });
+
+  // ── Delegação de cliques na grade de elementos ────────────
+  // Em vez de onclick= em cada card (o que violaria a CSP),
+  // colocamos UM único listener na grade pai. Quando qualquer
+  // elemento filho é clicado, subimos pelo DOM até encontrar
+  // o card raiz (.elem-card) e extraímos o número do elemento
+  // do atributo data-number. Simples, eficiente, seguro.
+  const grid = document.getElementById("elements-upload-grid");
+  if (grid) {
+    grid.addEventListener("click", (e) => {
+      // Verifica se o clique foi em algo com a classe .elem-upload-trigger
+      const trigger = e.target.closest(".elem-upload-trigger");
+      if (!trigger) return;
+
+      // Sobe até o card raiz para pegar o número do elemento
+      const card = e.target.closest(".elem-card");
+      if (!card) return;
+
+      const elementNumber = parseInt(card.dataset.number, 10);
+      if (!isNaN(elementNumber)) triggerUpload(elementNumber);
+    });
+
+    // Fallback para imagens quebradas — também por delegação (capture: true
+    // é necessário porque o evento "error" não sobe pelo DOM naturalmente).
+    grid.addEventListener("error", (e) => {
+      if (e.target.tagName !== "IMG") return;
+      e.target.style.display = "none";
+      const placeholder = e.target.nextElementSibling;
+      if (placeholder) placeholder.style.display = "flex";
+    }, true); // capture: true para pegar o erro antes que ele suma
+  }
 
   // Inicializa
   initAdmin();
