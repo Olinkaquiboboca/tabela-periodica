@@ -26,21 +26,25 @@
   --cat-halogenio:           #ffa8a8;
   --cat-gas-nobre:           #a5d8ff;
 
-  /* Paleta base — tema escuro científico/técnico */
-  --bg:           #080c14;
-  --bg-card:      #0e1420;
-  --bg-raised:    #141c2e;
-  --bg-glass:     rgba(14, 20, 32, 0.92);
-  --text:         #dde4f0;
-  --text-muted:   #5a6a8a;
-  --text-dim:     #334156;
-  --border:       rgba(100, 140, 200, 0.10);
-  --border-glow:  rgba(100, 180, 255, 0.25);
-  --accent:       #4dabf7;
-  --accent-glow:  rgba(77, 171, 247, 0.3);
-  --success:      #51cf66;
-  --danger:       #ff6b6b;
-  --overlay-bg:   rgba(4, 8, 18, 0.85);
+ /* Paleta base — tema escuro científico/técnico */
+  --bg: #f4f8fc;
+  --bg-card: #ffffff;
+  --bg-raised: #eaf1fb;
+  --bg-glass: rgba(255, 255, 255, 0.88);
+
+  --text: #1f2a37;
+  --text-muted: #5f7287;
+  --text-dim: #8a9aac;
+
+  --border: rgba(74, 110, 165, 0.14);
+  --border-glow: rgba(77, 171, 247, 0.18);
+
+  --accent: #2f80ed;
+  --accent-glow: rgba(47, 128, 237, 0.22);
+
+  --success: #27ae60;
+  --danger: #eb5757;
+  --overlay-bg: rgba(18, 32, 48, 0.45);
 }
 
 html {
