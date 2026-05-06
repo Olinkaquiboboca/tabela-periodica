@@ -25,6 +25,37 @@ let _currentSection   = "overview";
 let _elementsData     = {};   // { [number]: cloudinary_url | null }
 let _activeFilter     = "all"; // "all" | "done" | "missing"
 let _uploadingElement = null;  // número do elemento sendo enviado no momento
+let _bulkRunning      = false;  // true enquanto o lote de upload em massa está ativo
+
+// ── Normalização de nome para matching ───────────────────────
+// Remove acentos e converte para minúsculas para comparação
+// segura entre o nome do arquivo e o name_pt do banco.
+// Ex: "Nitrogênio" → "nitrogenio", "Berílio" → "berilio"
+function _normalizeName(str) {
+  return str
+    .toLowerCase()
+    .normalize("NFD")                    // decompõe letras acentuadas em base + diacrítico
+    .replace(/[\u0300-\u036f]/g, "")   // remove os diacríticos (acentos)
+    .trim();
+}
+
+// Extrai o nome do elemento a partir do nome do arquivo.
+// Padrão esperado: "elemento_[nome].png" (ou .jpg/.webp)
+// Retorna null se o arquivo não seguir o padrão.
+function _extractNameFromFilename(filename) {
+  const match = filename.match(/^elemento_(.+?)\.(png|jpg|jpeg|webp)$/i);
+  if (!match) return null;
+  return match[1]; // o nome entre "elemento_" e a extensão
+}
+
+// Tenta encontrar o elemento do ELEMENTS_LAYOUT correspondente
+// ao nome extraído do arquivo, usando comparação normalizada.
+function _matchElementByName(extractedName) {
+  const normalizedExtracted = _normalizeName(extractedName);
+  return ELEMENTS_LAYOUT.find(el =>
+    _normalizeName(el.name_pt) === normalizedExtracted
+  ) ?? null;
+}
 
 // ── Inicialização ─────────────────────────────────────────────
 async function initAdmin() {
@@ -548,6 +579,173 @@ function setElementsFilter(filter) {
   renderElementCards();
 }
 
+// ── Upload em lote (importação em massa) ─────────────────────
+
+// Disparado quando o usuário seleciona vários arquivos pelo input em lote.
+// Para cada arquivo: tenta fazer o match pelo nome, faz upload pro Cloudinary,
+// salva URL no Supabase, e atualiza o painel de progresso em tempo real.
+async function onBulkFilesSelected(event) {
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+
+  // Bloqueia re-entrada: o botão flutuante vira "Cancelar" durante o lote
+  _bulkRunning = true;
+  _setBulkButtonState("running");
+
+  // Classifica os arquivos antes de começar:
+  // matched  → arquivo tem nome válido E encontramos o elemento correspondente
+  // unmatched → arquivo segue o padrão mas não bateu com nenhum elemento
+  // invalid  → arquivo não segue o padrão "elemento_[nome].ext"
+  const matched   = [];
+  const unmatched = [];
+  const invalid   = [];
+
+  for (const file of files) {
+    const extractedName = _extractNameFromFilename(file.name);
+    if (!extractedName) {
+      invalid.push(file.name);
+      continue;
+    }
+    const el = _matchElementByName(extractedName);
+    if (!el) {
+      unmatched.push(file.name);
+    } else {
+      matched.push({ file, el });
+    }
+  }
+
+  // Exibe o painel de progresso com o resumo inicial
+  _showBulkProgress(matched.length, unmatched, invalid);
+
+  let successCount = 0;
+  let errorCount   = 0;
+
+  // Processa os matched em sequência (não em paralelo) para evitar
+  // sobrecarregar o Cloudinary e facilitar o acompanhamento visual.
+  for (let i = 0; i < matched.length; i++) {
+    if (!_bulkRunning) break; // usuário cancelou
+
+    const { file, el } = matched[i];
+    _updateBulkProgressItem(el.number, "uploading", `Enviando ${el.name_pt}…`);
+
+    try {
+      const url = await _uploadToCloudinary(file, el.number);
+      await _saveUrlToSupabase(el.number, url);
+
+      _elementsData[el.number] = url;
+      _updateElementsProgress();
+      _refreshCard(el.number);
+
+      successCount++;
+      _updateBulkProgressItem(el.number, "success", `✓ ${el.name_pt}`);
+    } catch (err) {
+      errorCount++;
+      _updateBulkProgressItem(el.number, "error", `✗ ${el.name_pt}: ${err.message}`);
+    }
+
+    // Atualiza o contador de progresso geral do painel
+    _updateBulkProgressCount(i + 1, matched.length, successCount, errorCount);
+  }
+
+  // Lote concluído
+  _bulkRunning = false;
+  _setBulkButtonState("idle");
+  _finalizeBulkProgress(successCount, errorCount, unmatched, invalid);
+
+  // Reseta o input para permitir re-seleção dos mesmos arquivos se necessário
+  event.target.value = "";
+}
+
+// Exibe o painel de progresso e monta a lista de itens a processar
+function _showBulkProgress(matchedCount, unmatched, invalid) {
+  const panel = document.getElementById("bulk-progress-panel");
+  if (!panel) return;
+
+  panel.style.display = "block";
+
+  // Cabeçalho com contagem
+  const header = panel.querySelector("#bulk-progress-header");
+  if (header) {
+    header.textContent = `Processando ${matchedCount} imagens…`;
+  }
+
+  // Lista de unmatched e inválidos (aviso imediato, antes mesmo de começar)
+  const warnings = panel.querySelector("#bulk-warnings");
+  if (warnings) {
+    let html = "";
+    if (unmatched.length) {
+      html += `<div class="bulk-warning">⚠ ${unmatched.length} arquivo(s) com nome válido mas sem elemento correspondente:<br>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">${unmatched.join(", ")}</span>
+      </div>`;
+    }
+    if (invalid.length) {
+      html += `<div class="bulk-warning">⚠ ${invalid.length} arquivo(s) ignorados (não seguem o padrão elemento_nome.png):<br>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">${invalid.join(", ")}</span>
+      </div>`;
+    }
+    warnings.innerHTML = html;
+  }
+
+  // Lista de progresso — um item por matched
+  const list = panel.querySelector("#bulk-progress-list");
+  if (list) list.innerHTML = ""; // limpa execução anterior
+}
+
+// Atualiza o estado visual de um item específico na fila
+function _updateBulkProgressItem(elementNumber, status, text) {
+  const list = document.getElementById("bulk-progress-list");
+  if (!list) return;
+
+  // Verifica se o item já existe (pode ser uma segunda execução)
+  let item = list.querySelector(`[data-bulk-number="${elementNumber}"]`);
+  if (!item) {
+    item = document.createElement("div");
+    item.className = "bulk-progress-item";
+    item.dataset.bulkNumber = elementNumber;
+    list.appendChild(item);
+  }
+
+  item.className = `bulk-progress-item bulk-${status}`;
+  item.textContent = text;
+
+  // Mantém o item visível fazendo scroll automático
+  item.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+// Atualiza o contador geral de progresso no topo do painel
+function _updateBulkProgressCount(current, total, success, errors) {
+  const header = document.getElementById("bulk-progress-header");
+  if (header) {
+    header.textContent = `Processando ${current}/${total} — ✓ ${success} ok, ✗ ${errors} erro(s)`;
+  }
+}
+
+// Mostra o resumo final quando o lote termina
+function _finalizeBulkProgress(success, errors, unmatched, invalid) {
+  const header = document.getElementById("bulk-progress-header");
+  if (header) {
+    const skipped = unmatched.length + invalid.length;
+    header.textContent =
+      `Concluído — ✓ ${success} enviadas, ✗ ${errors} erro(s), ⊘ ${skipped} ignoradas`;
+  }
+}
+
+// Alterna o visual e comportamento do botão flutuante conforme o estado
+function _setBulkButtonState(state) {
+  const btn = document.getElementById("btn-bulk-upload");
+  if (!btn) return;
+
+  if (state === "running") {
+    btn.textContent  = "⊗ Cancelar lote";
+    btn.className    = "bulk-upload-fab running";
+    btn.dataset.mode = "cancel";
+  } else {
+    btn.textContent  = "⬆ Importar imagens";
+    btn.className    = "bulk-upload-fab";
+    btn.dataset.mode = "select";
+  }
+}
+
 // ── Navegação entre seções ────────────────────────────────────
 function navigateTo(sectionName) {
   document.querySelectorAll(".admin-content-section").forEach(s => s.classList.add("hidden"));
@@ -613,6 +811,37 @@ document.addEventListener("DOMContentLoaded", () => {
       const placeholder = e.target.nextElementSibling;
       if (placeholder) placeholder.style.display = "flex";
     }, true);
+  }
+
+  // Fecha o painel de progresso do lote ao clicar no ✕
+  document.getElementById("btn-bulk-panel-close")?.addEventListener("click", () => {
+    const panel = document.getElementById("bulk-progress-panel");
+    if (panel) panel.style.display = "none";
+  });
+
+  // ── Botão flutuante de importação em lote ────────────────
+  // O botão tem dois modos: "select" abre o seletor de arquivos,
+  // "cancel" interrompe um lote em andamento (seta _bulkRunning=false).
+  const bulkBtn   = document.getElementById("btn-bulk-upload");
+  const bulkInput = document.getElementById("bulk-file-input");
+
+  if (bulkBtn && bulkInput) {
+    bulkInput.addEventListener("change", onBulkFilesSelected);
+
+    bulkBtn.addEventListener("click", () => {
+      if (bulkBtn.dataset.mode === "cancel") {
+        // Cancela o lote atual — o loop em onBulkFilesSelected vai parar
+        // na próxima iteração quando checar _bulkRunning === false
+        _bulkRunning = false;
+        _setBulkButtonState("idle");
+        const header = document.getElementById("bulk-progress-header");
+        if (header) header.textContent += " (cancelado)";
+      } else {
+        // Abre o seletor de múltiplos arquivos
+        bulkInput.value = "";
+        bulkInput.click();
+      }
+    });
   }
 
   // Inicializa
