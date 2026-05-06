@@ -48,12 +48,35 @@ function _extractNameFromFilename(filename) {
   return match[1]; // o nome entre "elemento_" e a extensão
 }
 
+// Mapa de aliases para nomes que divergem da nomenclatura oficial.
+// Útil para elementos mais novos cujos nomes variam no uso cotidiano.
+// Chave: nome normalizado (sem acentos, minúsculas); Valor: número atômico.
+const ELEMENT_ALIASES = {
+  "einstenio":  99,   // arquivo: einsténio  → oficial: Einsteínio
+  "oganesson":  118,  // arquivo: oganésson  → oficial: Oganessônio
+  "oganessonio":118,  // variante com sufixo completo
+  "radao":      86,   // arquivo: radão      → oficial: Radônio
+  "tenesso":    117,  // arquivo: tenesso    → oficial: Tennessino
+  "tennesino":  117,  // variante alternativa
+  "xenon":      54,   // arquivo: xénon      → oficial: Xenônio
+  "xenio":      54,   // outra variante
+};
+
 // Tenta encontrar o elemento do ELEMENTS_LAYOUT correspondente
-// ao nome extraído do arquivo, usando comparação normalizada.
+// ao nome extraído do arquivo. Verifica primeiro o mapa de aliases
+// (para nomes alternativos conhecidos), depois tenta o match direto
+// pelo name_pt normalizado.
 function _matchElementByName(extractedName) {
-  const normalizedExtracted = _normalizeName(extractedName);
+  const normalized = _normalizeName(extractedName);
+
+  // Aliases têm prioridade — cobrem nomes que diferem da nomenclatura oficial
+  if (ELEMENT_ALIASES[normalized] !== undefined) {
+    return ELEMENTS_LAYOUT.find(el => el.number === ELEMENT_ALIASES[normalized]) ?? null;
+  }
+
+  // Match direto pelo name_pt normalizado (cobre os outros 113 elementos)
   return ELEMENTS_LAYOUT.find(el =>
-    _normalizeName(el.name_pt) === normalizedExtracted
+    _normalizeName(el.name_pt) === normalized
   ) ?? null;
 }
 
