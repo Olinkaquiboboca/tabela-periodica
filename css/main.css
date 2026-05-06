@@ -14,7 +14,7 @@
   --radius-lg:    12px;
   --transition:   0.25s ease;
 
-  /* Cores por categoria de elemento */
+  /* ── Cores por categoria de elemento ─────────────────── */
   --cat-alcali:              #ff6b6b;
   --cat-alcalino-terroso:    #ffa94d;
   --cat-lantanideo:          #da77f2;
@@ -26,7 +26,7 @@
   --cat-halogenio:           #ffa8a8;
   --cat-gas-nobre:           #a5d8ff;
 
-  /* Paleta base — tema escuro científico/técnico */
+  /* ── Paleta base — tema escuro científico/técnico ────── */
   --bg:           #080c14;
   --bg-card:      #0e1420;
   --bg-raised:    #141c2e;
@@ -41,8 +41,55 @@
   --success:      #51cf66;
   --danger:       #ff6b6b;
   --overlay-bg:   rgba(4, 8, 18, 0.85);
+
+  /* ── Tipografia intermediária ─────────────────────────── */
+  /* Usado nos nomes dos elementos dentro das células,       */
+  /* que ficam em ~10px — precisa de mais contraste          */
+  /* do que --text-muted mas menos peso que --text.          */
+  --text-secondary: #8a9bb8;
+
+  /* ── Modal ────────────────────────────────────────────── */
+  /* Ligeiramente mais claro que --bg-card para criar        */
+  /* separação clara ao abrir sobre a tabela colorida.       */
+  --bg-modal:         #111826;
+  --bg-modal-header:  #0a1020;
+
+  /* ── Estado "adotado pelo aluno" ──────────────────────── */
+  /* Âmbar: única temperatura de cor ausente na paleta.      */
+  /* Vai contrastar sem colidir com nenhuma das 10 categorias.*/
+  --adopted:       #ffd43b;
+  --adopted-glow:  rgba(255, 212, 59, 0.20);
+  --adopted-dim:   rgba(255, 212, 59, 0.07);
+
+  /* ── Estado "ocupado por outro aluno" ─────────────────── */
+  /* Overlay escuro semitransparente — preserva a cor da     */
+  /* categoria embaixo, mas sinaliza "indisponível".         */
+  --taken-overlay: rgba(8, 12, 20, 0.62);
+
+  /* ── Progresso coletivo da turma ──────────────────────── */
+  /* Gradiente que vai aquecendo conforme elementos são      */
+  /* adotados: começa azul frio (0%) → âmbar (100%).        */
+  --progress-from: #4dabf7;
+  --progress-to:   #ffd43b;
+
+  /* ── Durations de animação centralizadas ─────────────── */
+  /* Centralizar aqui permite ajustar o "ritmo" global       */
+  /* do site sem caçar valores espalhados pelo CSS.          */
+  --dur-fast:   150ms;
+  --dur-normal: 260ms;
+  --dur-slow:   420ms;
+
+  /* ── Easing físico (simula inércia real) ─────────────── */
+  /* spring: ultrapassa levemente e volta — sensação de peso */
+  /* out-back: entra com impulso e para suavemente          */
+  --ease-spring:   cubic-bezier(0.34, 1.45, 0.64, 1);
+  --ease-out-back: cubic-bezier(0.175, 0.885, 0.32, 1.15);
+  --ease-out-circ: cubic-bezier(0.075, 0.82, 0.165, 1);
 }
 
+/* ============================================================
+   BASE
+   ============================================================ */
 html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
@@ -58,7 +105,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Grid noise texture overlay */
+/* Gradientes atmosféricos de fundo — não pulsam, ficam estáticos */
 body::before {
   content: '';
   position: fixed;
@@ -124,6 +171,8 @@ body::before {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 4px 10px;
+  /* Entrada suave da barra ao carregar */
+  animation: fadeSlideDown var(--dur-slow) var(--ease-out-circ) both;
 }
 
 .session-code-label {
@@ -149,7 +198,7 @@ body::before {
   gap: 16px;
 }
 
-/* Counter com pips visuais */
+/* ── Counter com pips visuais ──────────────────────────────── */
 .counter {
   display: flex;
   align-items: center;
@@ -168,13 +217,16 @@ body::before {
   border-radius: 50%;
   border: 1.5px solid var(--text-dim);
   background: transparent;
-  transition: all 0.3s ease;
+  transition:
+    background var(--dur-normal) ease,
+    border-color var(--dur-normal) ease,
+    box-shadow var(--dur-normal) ease;
 }
 
 .pip.filled {
-  background: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 0 8px var(--accent-glow);
+  background: var(--adopted);          /* âmbar — consistente com chosen-mine */
+  border-color: var(--adopted);
+  box-shadow: 0 0 6px var(--adopted-glow);
 }
 
 .counter-label {
@@ -188,16 +240,19 @@ body::before {
   font-weight: 700;
 }
 
-/* Animação ao adicionar pip */
+/* ── Animação de pip ao ser preenchido ─────────────────────── */
+/* spring: vai além do tamanho final e volta — sensação física */
 @keyframes pipPop {
   0%   { transform: scale(1); }
-  50%  { transform: scale(1.6); }
+  45%  { transform: scale(1.7); }
+  70%  { transform: scale(0.88); }
   100% { transform: scale(1); }
 }
 .pip.pop {
-  animation: pipPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: pipPop 0.38s var(--ease-spring);
 }
 
+/* ── Botão Concluir ─────────────────────────────────────────── */
 .conclude-btn {
   display: flex;
   align-items: center;
@@ -211,14 +266,22 @@ body::before {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition);
+  transition:
+    background var(--dur-normal) ease,
+    transform var(--dur-fast) ease,
+    opacity var(--dur-normal) ease;
   letter-spacing: 0.2px;
 }
 
 .conclude-btn:not(:disabled):hover {
   background: #74c0fc;
-  box-shadow: 0 0 20px var(--accent-glow);
   transform: translateY(-1px);
+}
+
+/* Pressionar: feedback tátil rápido */
+.conclude-btn:not(:disabled):active {
+  transform: translateY(0px) scale(0.97);
+  transition-duration: var(--dur-fast);
 }
 
 .conclude-btn:disabled {
@@ -268,18 +331,22 @@ body::before {
   white-space: nowrap;
   opacity: 0.85;
   letter-spacing: 0.3px;
+  cursor: default;
+  /* Hover sutil para indicar que são filtráveis no futuro */
+  transition: opacity var(--dur-fast) ease;
 }
+.legend-item:hover { opacity: 1; }
 
-.legend-item.cat-alcali             { background: color-mix(in srgb, var(--cat-alcali) 20%, transparent);             color: var(--cat-alcali); }
-.legend-item.cat-alcalino-terroso   { background: color-mix(in srgb, var(--cat-alcalino-terroso) 20%, transparent);   color: var(--cat-alcalino-terroso); }
-.legend-item.cat-lantanideo         { background: color-mix(in srgb, var(--cat-lantanideo) 20%, transparent);         color: var(--cat-lantanideo); }
-.legend-item.cat-actinideo          { background: color-mix(in srgb, var(--cat-actinideo) 20%, transparent);          color: var(--cat-actinideo); }
-.legend-item.cat-metal-transicao    { background: color-mix(in srgb, var(--cat-metal-transicao) 20%, transparent);    color: var(--cat-metal-transicao); }
-.legend-item.cat-metal-pos-transicao{ background: color-mix(in srgb, var(--cat-metal-pos-transicao) 20%, transparent);color: var(--cat-metal-pos-transicao); }
-.legend-item.cat-semimetal          { background: color-mix(in srgb, var(--cat-semimetal) 20%, transparent);          color: var(--cat-semimetal); }
-.legend-item.cat-nao-metal          { background: color-mix(in srgb, var(--cat-nao-metal) 20%, transparent);          color: #b8900a; }
-.legend-item.cat-halogenio          { background: color-mix(in srgb, var(--cat-halogenio) 20%, transparent);          color: var(--cat-halogenio); }
-.legend-item.cat-gas-nobre          { background: color-mix(in srgb, var(--cat-gas-nobre) 20%, transparent);          color: var(--cat-gas-nobre); }
+.legend-item.cat-alcali              { background: color-mix(in srgb, var(--cat-alcali) 20%, transparent);              color: var(--cat-alcali); }
+.legend-item.cat-alcalino-terroso    { background: color-mix(in srgb, var(--cat-alcalino-terroso) 20%, transparent);    color: var(--cat-alcalino-terroso); }
+.legend-item.cat-lantanideo          { background: color-mix(in srgb, var(--cat-lantanideo) 20%, transparent);          color: var(--cat-lantanideo); }
+.legend-item.cat-actinideo           { background: color-mix(in srgb, var(--cat-actinideo) 20%, transparent);           color: var(--cat-actinideo); }
+.legend-item.cat-metal-transicao     { background: color-mix(in srgb, var(--cat-metal-transicao) 20%, transparent);     color: var(--cat-metal-transicao); }
+.legend-item.cat-metal-pos-transicao { background: color-mix(in srgb, var(--cat-metal-pos-transicao) 20%, transparent); color: var(--cat-metal-pos-transicao); }
+.legend-item.cat-semimetal           { background: color-mix(in srgb, var(--cat-semimetal) 20%, transparent);           color: var(--cat-semimetal); }
+.legend-item.cat-nao-metal           { background: color-mix(in srgb, var(--cat-nao-metal) 20%, transparent);           color: #b8900a; }
+.legend-item.cat-halogenio           { background: color-mix(in srgb, var(--cat-halogenio) 20%, transparent);           color: var(--cat-halogenio); }
+.legend-item.cat-gas-nobre           { background: color-mix(in srgb, var(--cat-gas-nobre) 20%, transparent);           color: var(--cat-gas-nobre); }
 
 /* ============================================================
    TOAST DE CONCLUSÃO
@@ -298,7 +365,7 @@ body::before {
   font-size: 14px;
   font-weight: 500;
   opacity: 0;
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition: opacity var(--dur-slow) ease, transform var(--dur-slow) var(--ease-out-circ);
   z-index: 1001;
   pointer-events: none;
   backdrop-filter: blur(8px);
@@ -322,7 +389,7 @@ body::before {
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  transition: opacity 0.6s ease;
+  transition: opacity 0.55s var(--ease-out-circ);
 }
 
 .loading-overlay.hidden {
@@ -344,6 +411,13 @@ body::before {
   font-family: var(--font-mono);
   font-size: 40px;
   font-weight: 700;
+  /* Pulso suave apenas durante o loading — para quando some */
+  animation: loadLogoPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes loadLogoPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
 }
 
 .loading-logo span:first-child { color: var(--cat-nao-metal); }
@@ -351,7 +425,7 @@ body::before {
 
 .loading-bar {
   width: 180px;
-  height: 3px;
+  height: 2px;           /* mais fino = mais elegante */
   background: var(--bg-raised);
   border-radius: 3px;
   overflow: hidden;
@@ -360,7 +434,8 @@ body::before {
 .loading-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, var(--accent), var(--cat-lantanideo));
+  /* O gradiente usa as duas variáveis de progresso — coerência visual */
+  background: linear-gradient(90deg, var(--progress-from), var(--progress-to));
   border-radius: 3px;
   animation: loadFill 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
@@ -379,11 +454,104 @@ body::before {
 }
 
 /* ============================================================
+   ANIMAÇÕES GLOBAIS REUTILIZÁVEIS
+   ============================================================ */
+
+/* Entrada de cima para baixo — usada na session-code-wrapper */
+@keyframes fadeSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Entrada de baixo para cima — usada em modais e toasts */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Entrada das células da tabela ─────────────────────────── */
+/* O JS define animation-delay por índice em table.js:          */
+/* cell.style.animationDelay = `${Math.min(idx * 4, 300)}ms`   */
+/* O efeito cria uma "onda" que varre a tabela da esq. p/ dir. */
+@keyframes cellEntrance {
+  from {
+    opacity: 0;
+    transform: scale(0.88) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── Shake — elemento indisponível ou limite atingido ─────── */
+/* Horizontal, curto, para de imediato — não dói nos olhos.    */
+@keyframes shake {
+  0%   { transform: translateX(0); }
+  18%  { transform: translateX(-5px); }
+  36%  { transform: translateX(4px); }
+  54%  { transform: translateX(-3px); }
+  72%  { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+
+/* ── Pulso de adoção — escolhido por mim ─────────────────── */
+/* Escala vai além de 1 e volta — spring sem biblioteca.       */
+/* Dispara UMA vez ao marcar chosen-mine.                      */
+@keyframes adoptPulse {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.12); }
+  60%  { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+/* ── Fade out suave — elemento tomado por outro ───────────── */
+@keyframes fadeToTaken {
+  from { opacity: 1; }
+  to   { opacity: 0.42; }
+}
+
+/* ── Entrada do modal ────────────────────────────────────────  */
+/* scale(0.96) → scale(1): parece que expande do ponto de       */
+/* clique, não que cai do céu — muito mais físico.              */
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── Entrada do overlay escuro ──────────────────────────────── */
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ============================================================
    UTILITIES
    ============================================================ */
 .hidden { display: none !important; }
 
-button:focus-visible, a:focus-visible, input:focus-visible {
+/* Focus ring — acessibilidade, mas discreta no tema escuro */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -393,3 +561,61 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--bg-raised); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ============================================================
+   ESTADOS DE CÉLULA (chosen-mine, chosen-other, shake)
+   Essas classes são aplicadas pelo table.js. O CSS anima
+   automaticamente ao detectar a classe nova no DOM.
+   ============================================================ */
+
+/* ── Célula adotada por mim ────────────────────────────────── */
+/* Âmbar sólido, sem neon. O brilho vem da saturação da cor,   */
+/* não de box-shadow acumulado.                                 */
+.element-cell.chosen-mine {
+  background: var(--adopted-dim) !important;
+  border-color: var(--adopted) !important;
+  animation: adoptPulse var(--dur-slow) var(--ease-spring) both;
+}
+
+/* Número e símbolo ganham a cor âmbar para reforçar posse */
+.element-cell.chosen-mine .cell-number,
+.element-cell.chosen-mine .cell-symbol,
+.element-cell.chosen-mine .cell-name {
+  color: var(--adopted);
+}
+
+/* Imagem de fundo some ao adotar — revela o ícone de texto */
+.element-cell.chosen-mine .cell-bg-image {
+  opacity: 0;
+  transition: opacity var(--dur-normal) ease;
+}
+
+/* ── Célula tomada por outro aluno ─────────────────────────── */
+/* Preserva cor da categoria por baixo, mas aplica overlay      */
+/* escuro via pseudo-elemento. Não usa opacity diretamente na   */
+/* célula para não afetar os filhos (texto ficaria ilegível).   */
+.element-cell.chosen-other {
+  position: relative;
+  cursor: not-allowed;
+  animation: fadeToTaken var(--dur-slow) ease forwards;
+}
+
+.element-cell.chosen-other::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--taken-overlay);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Imagem some também para os tomados por outro */
+.element-cell.chosen-other .cell-bg-image {
+  opacity: 0;
+  transition: opacity var(--dur-normal) ease;
+}
+
+/* ── Shake — elemento indisponível ─────────────────────────── */
+.element-cell.shake {
+  animation: shake 0.32s ease both;
+}
