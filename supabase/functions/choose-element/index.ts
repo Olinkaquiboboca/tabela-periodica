@@ -15,7 +15,7 @@ function corsHeaders(origin: string): Record<string, string> {
   const allowed = Deno.env.get("ALLOWED_ORIGIN") ?? "";
   return {
     "Access-Control-Allow-Origin":  origin === allowed ? allowed : "",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Max-Age":       "86400",
   };
