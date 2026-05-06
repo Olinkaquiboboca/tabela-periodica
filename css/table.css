@@ -273,3 +273,42 @@
 .element-cell {
   animation: cellFadeIn 0.3s ease both;
 }
+
+/* ============================================================
+   IMAGEM DE FUNDO DA CÉLULA (Cloudinary)
+   Visível por padrão; some quando o elemento é escolhido.
+   ============================================================ */
+.cell-bg-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;         /* preenche a célula sem distorcer */
+  border-radius: inherit;
+  z-index: 2;                /* fica acima do fundo colorido... */
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+/* ...mas abaixo do ::before (checkmark / ⊗) que está no z-index 3 */
+
+/* Quando escolhido por MIM: esconde a imagem, mostra o ícone de texto */
+.element-cell.chosen-mine .cell-bg-image {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Quando escolhido por OUTRO: também esconde a imagem */
+.element-cell.chosen-other .cell-bg-image {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Garante que número/símbolo/nome fiquem acima da imagem
+   enquanto a imagem está visível (estado "não escolhido") */
+.cell-number,
+.cell-symbol,
+.cell-name {
+  position: relative;
+  z-index: 3;         /* acima da .cell-bg-image */
+}
