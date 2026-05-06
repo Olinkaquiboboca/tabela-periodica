@@ -9,26 +9,28 @@
   z-index: 1;
 }
 
+/* Grade de fundo sutil — dá sensação de laboratório/grid técnico */
 .table-bg {
   position: absolute;
   top: 20px; left: 16px; right: 16px; bottom: 32px;
   pointer-events: none;
   z-index: 0;
   opacity: 0.04;
-  background-image: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 39px,
-    rgba(100, 140, 200, 0.3) 39px,
-    rgba(100, 140, 200, 0.3) 40px
-  ),
-  repeating-linear-gradient(
-    90deg,
-    transparent,
-    transparent 39px,
-    rgba(100, 140, 200, 0.3) 39px,
-    rgba(100, 140, 200, 0.3) 40px
-  );
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 39px,
+      rgba(100, 140, 200, 0.3) 39px,
+      rgba(100, 140, 200, 0.3) 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 39px,
+      rgba(100, 140, 200, 0.3) 39px,
+      rgba(100, 140, 200, 0.3) 40px
+    );
 }
 
 /* ============================================================
@@ -45,7 +47,7 @@
 }
 
 /* ============================================================
-   CÉLULA DE ELEMENTO
+   CÉLULA DE ELEMENTO — BASE
    ============================================================ */
 .element-cell {
   position: relative;
@@ -53,34 +55,58 @@
   border-radius: 5px;
   padding: 5px 4px 4px;
   cursor: pointer;
-  transition:
-    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.15s ease,
-    z-index 0s;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.05);
   background: var(--bg-card);
   user-select: none;
+
+  /* Transição física — spring para o hover, ease para o resto */
+  transition:
+    transform     var(--dur-fast) var(--ease-spring),
+    background    var(--dur-normal) ease,
+    border-color  var(--dur-normal) ease,
+    box-shadow    var(--dur-fast) ease;
+
+  /* ── Animação de entrada escalonada ──────────────────────
+     O @keyframe cellEntrance está definido em main.css.
+     O JS em table.js define animation-delay por índice:
+       cell.style.animationDelay = `${Math.min(idx * 4, 300)}ms`
+     Isso cria uma onda que varre a tabela da esquerda p/ direita.
+     
+     "both" é crucial: mantém o estado inicial (opacity:0, scale:0.88)
+     ANTES da animação começar, evitando flash de elementos visíveis
+     que depois desaparecem para animar. ──────────────────────── */
+  animation: cellEntrance var(--dur-normal) var(--ease-out-back) both;
 }
 
+/* ── Hover — física de escala ────────────────────────────────
+   scale(1.18) com spring cria a sensação de que a célula
+   "salta" ao ser tocada — tem inércia, não é linear.
+   z-index sobe para a célula ficar na frente das vizinhas. */
 .element-cell:hover {
   transform: scale(1.18);
   z-index: 10;
-  box-shadow:
-    0 6px 24px rgba(0, 0, 0, 0.6),
-    0 0 0 1px var(--cell-color, rgba(255,255,255,0.2));
+  /* Sombra sutil — indica elevação, não neon */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
-/* Brilho no hover baseado na cor da categoria */
+/* Gradiente de brilho direcional no hover —
+   simula fonte de luz vindo do canto superior esquerdo.
+   Não é neon, é direcionamento de luz. */
 .element-cell::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.07) 0%, transparent 60%);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    transparent 55%
+  );
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.2s ease;
-  z-index: 5; /* acima de tudo, incluindo a imagem */
+  transition: opacity var(--dur-fast) ease;
+  /* z-index 5: acima de tudo, incluindo a imagem Cloudinary */
+  z-index: 5;
 }
 .element-cell:hover::after {
   opacity: 1;
@@ -88,36 +114,48 @@
 
 /* ============================================================
    CORES POR CATEGORIA
-   ============================================================ */
-.cat-alcali              { --cell-color: var(--cat-alcali);              background: color-mix(in srgb, var(--cat-alcali) 12%, var(--bg-card));              border-color: color-mix(in srgb, var(--cat-alcali) 35%, transparent); }
-.cat-alcalino-terroso    { --cell-color: var(--cat-alcalino-terroso);    background: color-mix(in srgb, var(--cat-alcalino-terroso) 12%, var(--bg-card));    border-color: color-mix(in srgb, var(--cat-alcalino-terroso) 35%, transparent); }
-.cat-lantanideo          { --cell-color: var(--cat-lantanideo);          background: color-mix(in srgb, var(--cat-lantanideo) 12%, var(--bg-card));          border-color: color-mix(in srgb, var(--cat-lantanideo) 35%, transparent); }
-.cat-actinideo           { --cell-color: var(--cat-actinideo);           background: color-mix(in srgb, var(--cat-actinideo) 12%, var(--bg-card));           border-color: color-mix(in srgb, var(--cat-actinideo) 35%, transparent); }
-.cat-metal-transicao     { --cell-color: var(--cat-metal-transicao);     background: color-mix(in srgb, var(--cat-metal-transicao) 12%, var(--bg-card));     border-color: color-mix(in srgb, var(--cat-metal-transicao) 35%, transparent); }
-.cat-metal-pos-transicao { --cell-color: var(--cat-metal-pos-transicao); background: color-mix(in srgb, var(--cat-metal-pos-transicao) 12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-metal-pos-transicao) 35%, transparent); }
-.cat-semimetal           { --cell-color: var(--cat-semimetal);           background: color-mix(in srgb, var(--cat-semimetal) 12%, var(--bg-card));           border-color: color-mix(in srgb, var(--cat-semimetal) 35%, transparent); }
-.cat-nao-metal           { --cell-color: var(--cat-nao-metal);           background: color-mix(in srgb, var(--cat-nao-metal) 12%, var(--bg-card));           border-color: color-mix(in srgb, var(--cat-nao-metal) 35%, transparent); }
-.cat-halogenio           { --cell-color: var(--cat-halogenio);           background: color-mix(in srgb, var(--cat-halogenio) 12%, var(--bg-card));           border-color: color-mix(in srgb, var(--cat-halogenio) 35%, transparent); }
-.cat-gas-nobre           { --cell-color: var(--cat-gas-nobre);           background: color-mix(in srgb, var(--cat-gas-nobre) 12%, var(--bg-card));           border-color: color-mix(in srgb, var(--cat-gas-nobre) 35%, transparent); }
 
-/* Hover: intensifica a cor */
-.element-cell:hover.cat-alcali              { background: color-mix(in srgb, var(--cat-alcali) 30%, var(--bg-card)); }
-.element-cell:hover.cat-alcalino-terroso    { background: color-mix(in srgb, var(--cat-alcalino-terroso) 30%, var(--bg-card)); }
-.element-cell:hover.cat-lantanideo          { background: color-mix(in srgb, var(--cat-lantanideo) 30%, var(--bg-card)); }
-.element-cell:hover.cat-actinideo           { background: color-mix(in srgb, var(--cat-actinideo) 30%, var(--bg-card)); }
-.element-cell:hover.cat-metal-transicao     { background: color-mix(in srgb, var(--cat-metal-transicao) 30%, var(--bg-card)); }
-.element-cell:hover.cat-metal-pos-transicao { background: color-mix(in srgb, var(--cat-metal-pos-transicao) 30%, var(--bg-card)); }
-.element-cell:hover.cat-semimetal           { background: color-mix(in srgb, var(--cat-semimetal) 30%, var(--bg-card)); }
-.element-cell:hover.cat-nao-metal           { background: color-mix(in srgb, var(--cat-nao-metal) 30%, var(--bg-card)); }
-.element-cell:hover.cat-halogenio           { background: color-mix(in srgb, var(--cat-halogenio) 30%, var(--bg-card)); }
-.element-cell:hover.cat-gas-nobre           { background: color-mix(in srgb, var(--cat-gas-nobre) 30%, var(--bg-card)); }
+   Cada categoria define:
+   - --cell-color: usado pelo símbolo e hover de borda
+   - background: 12% da cor da categoria misturada ao --bg-card
+   - border-color: 35% da cor — visível mas não gritante
+   ============================================================ */
+.cat-alcali              { --cell-color: var(--cat-alcali);              background: color-mix(in srgb, var(--cat-alcali)              12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-alcali)              35%, transparent); }
+.cat-alcalino-terroso    { --cell-color: var(--cat-alcalino-terroso);    background: color-mix(in srgb, var(--cat-alcalino-terroso)    12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-alcalino-terroso)    35%, transparent); }
+.cat-lantanideo          { --cell-color: var(--cat-lantanideo);          background: color-mix(in srgb, var(--cat-lantanideo)          12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-lantanideo)          35%, transparent); }
+.cat-actinideo           { --cell-color: var(--cat-actinideo);           background: color-mix(in srgb, var(--cat-actinideo)           12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-actinideo)           35%, transparent); }
+.cat-metal-transicao     { --cell-color: var(--cat-metal-transicao);     background: color-mix(in srgb, var(--cat-metal-transicao)     12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-metal-transicao)     35%, transparent); }
+.cat-metal-pos-transicao { --cell-color: var(--cat-metal-pos-transicao); background: color-mix(in srgb, var(--cat-metal-pos-transicao) 12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-metal-pos-transicao) 35%, transparent); }
+.cat-semimetal           { --cell-color: var(--cat-semimetal);           background: color-mix(in srgb, var(--cat-semimetal)           12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-semimetal)           35%, transparent); }
+.cat-nao-metal           { --cell-color: var(--cat-nao-metal);           background: color-mix(in srgb, var(--cat-nao-metal)           12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-nao-metal)           35%, transparent); }
+.cat-halogenio           { --cell-color: var(--cat-halogenio);           background: color-mix(in srgb, var(--cat-halogenio)           12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-halogenio)           35%, transparent); }
+.cat-gas-nobre           { --cell-color: var(--cat-gas-nobre);           background: color-mix(in srgb, var(--cat-gas-nobre)           12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-gas-nobre)           35%, transparent); }
+
+/* Hover: intensifica o background de 12% para 28% —
+   sutil o suficiente para não parecer highlight de seleção,
+   forte o suficiente para dar feedback visual claro. */
+.element-cell:hover.cat-alcali              { background: color-mix(in srgb, var(--cat-alcali)              28%, var(--bg-card)); }
+.element-cell:hover.cat-alcalino-terroso    { background: color-mix(in srgb, var(--cat-alcalino-terroso)    28%, var(--bg-card)); }
+.element-cell:hover.cat-lantanideo          { background: color-mix(in srgb, var(--cat-lantanideo)          28%, var(--bg-card)); }
+.element-cell:hover.cat-actinideo           { background: color-mix(in srgb, var(--cat-actinideo)           28%, var(--bg-card)); }
+.element-cell:hover.cat-metal-transicao     { background: color-mix(in srgb, var(--cat-metal-transicao)     28%, var(--bg-card)); }
+.element-cell:hover.cat-metal-pos-transicao { background: color-mix(in srgb, var(--cat-metal-pos-transicao) 28%, var(--bg-card)); }
+.element-cell:hover.cat-semimetal           { background: color-mix(in srgb, var(--cat-semimetal)           28%, var(--bg-card)); }
+.element-cell:hover.cat-nao-metal           { background: color-mix(in srgb, var(--cat-nao-metal)           28%, var(--bg-card)); }
+.element-cell:hover.cat-halogenio           { background: color-mix(in srgb, var(--cat-halogenio)           28%, var(--bg-card)); }
+.element-cell:hover.cat-gas-nobre           { background: color-mix(in srgb, var(--cat-gas-nobre)           28%, var(--bg-card)); }
 
 /* ============================================================
    IMAGEM DE FUNDO DA CÉLULA (Cloudinary)
 
-   Fica em z-index: 2, cobrindo os textos (z-index: 1) por padrão.
-   Quando o elemento é escolhido, o CSS a esconde via opacity: 0
-   e os textos ficam visíveis novamente.
+   z-index 2: fica ACIMA dos textos (z-index 1) por padrão,
+   cobrindo-os enquanto a imagem está visível.
+   
+   Começa com opacity:0 — o JS a sobe para 1 somente após
+   o onload, evitando flash de imagem quebrada.
+   
+   Quando o elemento é escolhido (chosen-mine / chosen-other),
+   a imagem some e os textos ficam visíveis novamente.
    ============================================================ */
 .cell-bg-image {
   position: absolute;
@@ -126,28 +164,31 @@
   height: 100%;
   object-fit: cover;
   border-radius: inherit;
-  z-index: 2;               /* cobre os textos que estão em z-index: 1 */
+  z-index: 2;
   pointer-events: none;
-  opacity: 0;               /* começa invisível; JS sobe para 1 após onload */
+  opacity: 0;
   transition: opacity 0.4s ease;
 }
 
-/* Quando escolhido (por mim ou por outro), a imagem some */
 .element-cell.chosen-mine  .cell-bg-image,
 .element-cell.chosen-other .cell-bg-image {
-  opacity: 0 !important;
+  opacity: 0;
+  /* transition aqui garante que some suavemente,
+     não pisca — sincroniza com o adoptPulse */
+  transition: opacity var(--dur-normal) ease;
 }
 
 /* ============================================================
    CONTEÚDO DA CÉLULA (número, símbolo, nome)
 
-   z-index: 1 = ficam ABAIXO da imagem por padrão (escondidos).
-   opacity: 0 = invisíveis enquanto a imagem os cobre.
-   Quando a imagem some (chosen-*), opacity volta a 1.
-
-   IMPORTANTE: as regras de opacity aqui substituem completamente
-   as regras antigas de opacity: 0.8 no .cell-number etc.
-   Não duplique essas declarações em nenhum outro lugar do arquivo.
+   z-index 1: ficam ABAIXO da imagem Cloudinary por padrão.
+   opacity 0: invisíveis enquanto a imagem os cobre.
+   
+   Quando a imagem some (estado chosen-*), o seletor abaixo
+   os revela com opacity:1 e z-index:4 (acima da imagem).
+   
+   O fallback :not(:has(.cell-bg-image)) cobre o caso onde
+   a imagem não carregou — o texto fica visível normalmente.
    ============================================================ */
 .cell-number {
   display: block;
@@ -157,8 +198,8 @@
   line-height: 1;
   position: relative;
   z-index: 1;
-  opacity: 0;               /* oculto enquanto a imagem cobre a célula */
-  transition: opacity 0.3s ease;
+  opacity: 0;
+  transition: opacity var(--dur-normal) ease;
 }
 
 .cell-symbol {
@@ -170,17 +211,18 @@
   text-align: center;
   margin: 1px 0;
   color: var(--cell-color, var(--text));
-  text-shadow: 0 0 12px color-mix(in srgb, var(--cell-color, transparent) 50%, transparent);
+  /* text-shadow muito sutil — só o suficiente para legibilidade */
+  text-shadow: 0 0 10px color-mix(in srgb, var(--cell-color, transparent) 40%, transparent);
   position: relative;
   z-index: 1;
-  opacity: 0;               /* oculto enquanto a imagem cobre a célula */
-  transition: opacity 0.3s ease;
+  opacity: 0;
+  transition: opacity var(--dur-normal) ease;
 }
 
 .cell-name {
   display: block;
   font-size: 6.5px;
-  color: var(--text-muted);
+  color: var(--text-secondary); /* usa a nova variável intermediária do main.css */
   text-align: center;
   overflow: hidden;
   white-space: nowrap;
@@ -188,22 +230,22 @@
   line-height: 1.2;
   position: relative;
   z-index: 1;
-  opacity: 0;               /* oculto enquanto a imagem cobre a célula */
-  transition: opacity 0.3s ease;
+  opacity: 0;
+  transition: opacity var(--dur-normal) ease;
 }
 
-/* Revela os textos quando o elemento foi escolhido (imagem sumiu) */
-.element-cell.chosen-mine .cell-number,
-.element-cell.chosen-mine .cell-symbol,
-.element-cell.chosen-mine .cell-name,
+/* Revela textos quando o elemento foi escolhido */
+.element-cell.chosen-mine  .cell-number,
+.element-cell.chosen-mine  .cell-symbol,
+.element-cell.chosen-mine  .cell-name,
 .element-cell.chosen-other .cell-number,
 .element-cell.chosen-other .cell-symbol,
 .element-cell.chosen-other .cell-name {
   opacity: 1;
-  z-index: 4; /* acima da imagem e do ::before */
+  z-index: 4;
 }
 
-/* Fallback: célula sem imagem (falha no Cloudinary) mostra os textos normalmente */
+/* Fallback: célula sem imagem mostra os textos normalmente */
 .element-cell:not(:has(.cell-bg-image)) .cell-number,
 .element-cell:not(:has(.cell-bg-image)) .cell-symbol,
 .element-cell:not(:has(.cell-bg-image)) .cell-name {
@@ -211,81 +253,108 @@
 }
 
 /* ============================================================
-   ESTADOS DE ESCOLHA
+   ESTADO: CHOSEN-MINE (adotado por mim)
+
+   Usa --adopted (âmbar) do main.css — cor única que não
+   conflita com nenhuma das 10 categorias de elementos.
+   
+   NÃO usa !important — a especificidade do seletor já é
+   suficiente, e !important cria cascata imprevisível quando
+   há múltiplos arquivos CSS.
+   
+   O @keyframe adoptPulse (definido em main.css) é aplicado
+   via main.css também — não repetimos aqui.
    ============================================================ */
 .element-cell.chosen-mine {
   cursor: default;
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 0 1px var(--accent), inset 0 0 12px rgba(77, 171, 247, 0.15);
+  background: var(--adopted-dim);
+  border-color: var(--adopted);
+  /* sombra interna sutil — indica "selecionado", não decorativo */
+  box-shadow: inset 0 0 10px rgba(255, 212, 59, 0.08);
+}
+
+/* Desativa o hover em elemento já meu — já está selecionado,
+   não faz sentido escalar ou mudar cor ao passar o mouse */
+.element-cell.chosen-mine:hover {
+  transform: none;
+  box-shadow: inset 0 0 10px rgba(255, 212, 59, 0.08);
 }
 
 .element-cell.chosen-mine .cell-symbol {
-  color: var(--accent) !important;
-  text-shadow: 0 0 16px var(--accent-glow);
+  color: var(--adopted);
+  text-shadow: none; /* remove o text-shadow da categoria — âmbar já é legível */
 }
 
-/* Checkmark no canto do elemento escolhido por mim */
+/* Checkmark no canto — pequeno, discreto, informativo */
 .element-cell.chosen-mine::before {
   content: '✓';
   position: absolute;
   top: 3px;
   right: 4px;
   font-size: 8px;
-  color: var(--accent);
+  color: var(--adopted);
   font-weight: 700;
-  z-index: 3;
+  z-index: 6; /* acima de tudo, incluindo ::after de brilho */
   line-height: 1;
 }
 
+/* ============================================================
+   ESTADO: CHOSEN-OTHER (adotado por outro aluno)
+
+   O ::after pseudo-elemento do estado base (brilho de hover)
+   precisa ser sobrescrito aqui para não aparecer no hover
+   de células tomadas — que não deveriam ter hover algum.
+   
+   O overlay escuro fica em main.css via .element-cell.chosen-other::after
+   Aqui tratamos apenas o comportamento específico da célula.
+   ============================================================ */
 .element-cell.chosen-other {
-  opacity: 0.2;
   cursor: not-allowed;
-  filter: grayscale(0.8);
-  transform: none !important;
-  box-shadow: none !important;
+  /* Desativa todas as interações visuais de hover */
+  transform: none;
+  box-shadow: none;
 }
 
-/* Ícone de ocupado */
+/* Sobrescreve o ::after de brilho para células tomadas —
+   o main.css vai definir o overlay escuro neste seletor,
+   então aqui garantimos que o brilho de hover não apareça */
+.element-cell.chosen-other:hover::after {
+  opacity: 0;
+}
+
+/* Ícone de "ocupado" — aparece quando a imagem some */
 .element-cell.chosen-other::before {
   content: '⊗';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 18px;
-  color: var(--danger);
-  opacity: 0.6;
-  z-index: 3;
-}
-
-/* Máscara reveladora (mantida para compatibilidade) */
-.element-mask {
-  position: absolute;
-  inset: 0;
-  transition: opacity 0.8s ease;
-  z-index: 2;
+  font-size: 16px;
+  color: var(--text-dim);  /* cinza neutro — não vermelho alarmista */
+  z-index: 6;
+  opacity: 0.5;
   pointer-events: none;
-  border-radius: inherit;
 }
 
 /* ============================================================
-   SHAKE ANIMATION (elemento já ocupado)
+   SHAKE (elemento indisponível / limite atingido)
+
+   O @keyframe shake está definido em main.css.
+   Aqui só aplicamos a animação e o feedback de borda.
+   
+   Nota: NÃO redefinimos @keyframes shake aqui — havia
+   duplicação com main.css que foi removida. O browser usa
+   a última definição encontrada, o que causava inconsistência.
    ============================================================ */
-@keyframes shake {
-  0%, 100% { transform: translateX(0) scale(1); }
-  20%       { transform: translateX(-5px) scale(1.05); }
-  40%       { transform: translateX(4px) scale(1.05); }
-  60%       { transform: translateX(-3px) scale(1.02); }
-  80%       { transform: translateX(2px) scale(1.01); }
-}
-
 .element-cell.shake {
-  animation: shake 0.35s ease;
-  border-color: var(--danger) !important;
+  animation: shake 0.32s ease both;
+  border-color: var(--danger);
+  /* Sem !important — a especificidade deste seletor
+     já vence as cores de categoria normais */
 }
 
 /* ============================================================
-   LABELS DAS SÉRIES (lantanídeos/actinídeos)
+   LABELS DAS SÉRIES (lantanídeos / actinídeos)
    ============================================================ */
 .series-labels {
   display: grid;
@@ -321,19 +390,13 @@
 }
 
 /* ============================================================
-   ENTRADA ANIMADA DAS CÉLULAS
+   ELEMENTO MÁSCARA (mantido por compatibilidade com JS existente)
    ============================================================ */
-@keyframes cellFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.85);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.element-cell {
-  animation: cellFadeIn 0.3s ease both;
+.element-mask {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.8s ease;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
 }
