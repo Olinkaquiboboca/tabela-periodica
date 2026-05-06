@@ -347,6 +347,14 @@ function renderElementCards() {
   }
 
   grid.innerHTML = filtered.map(el => _buildElementCard(el)).join("");
+
+  // Após renderizar, anexa um listener de "change" em cada input por card.
+  // Fazemos isso aqui (e não via delegação na grade) porque o evento "change"
+  // de um file input também precisa estar próximo da origem para funcionar
+  // corretamente em todos os navegadores.
+  grid.querySelectorAll(".elem-file-input-card").forEach(input => {
+    input.addEventListener("change", onElementFileSelected);
+  });
 }
 
 // Constrói o HTML de um único card de elemento com estado visual
@@ -356,8 +364,7 @@ function _buildElementCard(el) {
   const isUpping = _uploadingElement === el.number;
 
   // Se tem imagem, mostra thumbnail; se não tem, mostra placeholder com símbolo.
-  // IMPORTANTE: sem onerror= inline — isso viola a CSP (script-src-attr bloqueado).
-  // O fallback de imagem quebrada é tratado por um listener com captura na grade.
+  // Sem onerror= inline (viola CSP) — o fallback é feito via listener com capture.
   const imageContent = hasPic
     ? `<img
         src="${url}"
@@ -373,27 +380,29 @@ function _buildElementCard(el) {
          <span>${el.symbol}</span>
        </div>`;
 
-  // Botão muda de texto dependendo do estado: carregando / já tem / sem imagem
   const btnText = isUpping
     ? `<span class="elem-upload-spinner"></span> Enviando…`
-    : hasPic
-      ? `↺ Trocar imagem`
-      : `↑ Adicionar imagem`;
+    : hasPic ? `↺ Trocar imagem` : `↑ Adicionar imagem`;
 
   const btnClass = isUpping ? "elem-upload-btn uploading" : "elem-upload-btn";
 
-  // Nenhum onclick= inline — todos os cliques são capturados por delegação de eventos
-  // no listener da grade (ver seção de event listeners no DOMContentLoaded abaixo).
-  // A classe .elem-upload-trigger marca os elementos clicáveis; data-number no card
-  // raiz identifica qual elemento foi acionado.
+  // Cada card tem seu próprio <input type="file"> invisível como label.
+  // Isso garante que o clique no botão/imagem aciona diretamente o input
+  // sem intermediários — o navegador exige que o .click() num file input
+  // venha de um gesto do usuário direto, sem delegação de eventos.
+  // O input fica dentro de um <label> que envolve o botão, então o
+  // clique no botão dispara o input nativamente pelo browser, sem JS.
+  const inputId = `elem-file-${el.number}`;
+
   return `
     <div class="elem-card ${hasPic ? "has-image" : "no-image"}" data-number="${el.number}">
-      <div class="elem-card-image-wrap elem-upload-trigger">
+
+      <label for="${inputId}" class="elem-card-image-wrap" style="cursor:pointer">
         ${imageContent}
         <div class="elem-card-overlay">
           <span>${hasPic ? "Trocar" : "Adicionar"}</span>
         </div>
-      </div>
+      </label>
 
       <div class="elem-card-info">
         <div class="elem-card-number" style="color:var(--cat-${el.category})">${el.number}</div>
@@ -401,29 +410,32 @@ function _buildElementCard(el) {
         <div class="elem-card-name">${el.name_pt}</div>
       </div>
 
-      <button class="${btnClass} elem-upload-trigger" ${isUpping ? "disabled" : ""}>${btnText}</button>
+      <label for="${inputId}" class="${btnClass}" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px">
+        ${btnText}
+      </label>
+
+      <input
+        type="file"
+        id="${inputId}"
+        class="elem-file-input-card"
+        data-number="${el.number}"
+        accept="image/jpeg,image/png,image/webp"
+        style="display:none"
+        ${isUpping ? "disabled" : ""}
+      >
     </div>
   `;
 }
 
-// Abre o seletor de arquivo para o elemento clicado.
-// O input#elem-file-input é um único input invisível compartilhado
-// por todos os cards — só mudamos o atributo data-target antes de clicar.
-function triggerUpload(elementNumber) {
-  if (_uploadingElement !== null) return; // bloqueia clique duplo enquanto envia
+// triggerUpload foi removido — o upload agora é acionado diretamente pelo
+// <label for="elem-file-NNN"> em cada card, sem precisar de JS intermediário.
+// O navegador conecta o label ao input nativamente, garantindo o user gesture.
 
-  const fileInput = document.getElementById("elem-file-input");
-  if (!fileInput) return;
-
-  fileInput.dataset.target = elementNumber; // salva qual elemento receberá a URL
-  fileInput.value = "";                     // limpa seleção anterior
-  fileInput.click();
-}
-
-// Disparado quando o usuário seleciona um arquivo no input invisível
+// Disparado quando o usuário seleciona um arquivo num dos inputs por card.
+// O número do elemento vem do atributo data-number do próprio input.
 async function onElementFileSelected(event) {
   const file          = event.target.files[0];
-  const elementNumber = parseInt(event.target.dataset.target, 10);
+  const elementNumber = parseInt(event.target.dataset.number, 10);
 
   if (!file || isNaN(elementNumber)) return;
 
@@ -584,46 +596,23 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Enter") addStudent();
   });
 
-  // Input de arquivo invisível — compartilhado por todos os cards
-  const fileInput = document.getElementById("elem-file-input");
-  if (fileInput) {
-    fileInput.addEventListener("change", onElementFileSelected);
-  }
-
   // Botões de filtro da seção de elementos
   document.querySelectorAll(".elements-filter-btn").forEach(btn => {
     btn.addEventListener("click", () => setElementsFilter(btn.dataset.filter));
   });
 
-  // ── Delegação de cliques na grade de elementos ────────────
-  // Em vez de onclick= em cada card (o que violaria a CSP),
-  // colocamos UM único listener na grade pai. Quando qualquer
-  // elemento filho é clicado, subimos pelo DOM até encontrar
-  // o card raiz (.elem-card) e extraímos o número do elemento
-  // do atributo data-number. Simples, eficiente, seguro.
+  // Fallback de imagem quebrada — delegação com capture na grade.
+  // O evento "error" não sobe pelo DOM, então usamos capture: true
+  // para interceptá-lo antes que desapareça. Quando uma imagem falha
+  // ao carregar, esconde o <img> e mostra o placeholder com o símbolo.
   const grid = document.getElementById("elements-upload-grid");
   if (grid) {
-    grid.addEventListener("click", (e) => {
-      // Verifica se o clique foi em algo com a classe .elem-upload-trigger
-      const trigger = e.target.closest(".elem-upload-trigger");
-      if (!trigger) return;
-
-      // Sobe até o card raiz para pegar o número do elemento
-      const card = e.target.closest(".elem-card");
-      if (!card) return;
-
-      const elementNumber = parseInt(card.dataset.number, 10);
-      if (!isNaN(elementNumber)) triggerUpload(elementNumber);
-    });
-
-    // Fallback para imagens quebradas — também por delegação (capture: true
-    // é necessário porque o evento "error" não sobe pelo DOM naturalmente).
     grid.addEventListener("error", (e) => {
       if (e.target.tagName !== "IMG") return;
       e.target.style.display = "none";
       const placeholder = e.target.nextElementSibling;
       if (placeholder) placeholder.style.display = "flex";
-    }, true); // capture: true para pegar o erro antes que ele suma
+    }, true);
   }
 
   // Inicializa
