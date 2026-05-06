@@ -283,32 +283,56 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;         /* preenche a célula sem distorcer */
+  object-fit: cover;
   border-radius: inherit;
-  z-index: 2;                /* fica acima do fundo colorido... */
+  z-index: 2;
   pointer-events: none;
+  opacity: 0; /* começa invisível; o JS sobe para 1 após onload */
   transition: opacity 0.4s ease;
 }
 
-/* ...mas abaixo do ::before (checkmark / ⊗) que está no z-index 3 */
-
-/* Quando escolhido por MIM: esconde a imagem, mostra o ícone de texto */
-.element-cell.chosen-mine .cell-bg-image {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Quando escolhido por OUTRO: também esconde a imagem */
+/* Quando escolhido, a imagem some — o CSS faz isso automaticamente
+   pela presença das classes abaixo */
+.element-cell.chosen-mine  .cell-bg-image,
 .element-cell.chosen-other .cell-bg-image {
-  opacity: 0;
+  opacity: 0 !important;
   pointer-events: none;
 }
 
-/* Garante que número/símbolo/nome fiquem acima da imagem
-   enquanto a imagem está visível (estado "não escolhido") */
+/* ============================================================
+   TEXTOS DA CÉLULA (número, símbolo, nome)
+   Ficam OCULTOS enquanto a imagem está visível (não escolhido).
+   Aparecem quando o elemento é escolhido (imagem some).
+   ============================================================ */
 .cell-number,
 .cell-symbol,
 .cell-name {
   position: relative;
-  z-index: 3;         /* acima da .cell-bg-image */
+  z-index: 1; /* abaixo da imagem (z-index: 2) por padrão */
+  opacity: 0; /* invisível enquanto a imagem cobre a célula */
+  transition: opacity 0.3s ease;
+}
+
+/* Quando escolhido por MIM: revela os textos acima da imagem */
+.element-cell.chosen-mine .cell-number,
+.element-cell.chosen-mine .cell-symbol,
+.element-cell.chosen-mine .cell-name {
+  opacity: 1;
+  z-index: 4; /* acima da imagem e do ::before */
+}
+
+/* Quando escolhido por OUTRO: também revela os textos */
+.element-cell.chosen-other .cell-number,
+.element-cell.chosen-other .cell-symbol,
+.element-cell.chosen-other .cell-name {
+  opacity: 1;
+  z-index: 4;
+}
+
+/* Fallback: se a célula não tiver imagem (onerror removeu o img),
+   os textos precisam aparecer normalmente */
+.element-cell:not(:has(.cell-bg-image)) .cell-number,
+.element-cell:not(:has(.cell-bg-image)) .cell-symbol,
+.element-cell:not(:has(.cell-bg-image)) .cell-name {
+  opacity: 1;
 }
