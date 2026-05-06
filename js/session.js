@@ -26,7 +26,6 @@ const Session = (() => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
         },
-        // Body vazio — o IP vem do header HTTP da requisição
         body: JSON.stringify({}),
       });
 
@@ -45,11 +44,9 @@ const Session = (() => {
       _studentName = data.student_name;
       _confirmed   = data.confirmed;
 
-      // Atualiza a UI com o código de sessão
       const codeDisplay = document.getElementById("session-code-display");
       if (codeDisplay) codeDisplay.textContent = _sessionCode;
 
-      // Se a sessão já tinha nome (recuperação após F5), preenche o campo
       if (_studentName) {
         const nameInput = document.getElementById("input-student-name");
         if (nameInput) {
@@ -64,7 +61,6 @@ const Session = (() => {
         }
       }
 
-      // Carrega escolhas já feitas (caso de recarregamento de página)
       await _loadExistingChoices();
 
       return { sessionId: _sessionId, sessionCode: _sessionCode };
@@ -74,7 +70,6 @@ const Session = (() => {
     }
   }
 
-  // Busca escolhas já confirmadas no banco para esta sessão
   async function _loadExistingChoices() {
     if (!_sessionId) return;
 
@@ -118,11 +113,8 @@ const Session = (() => {
       const data = await res.json();
 
       if (data.valid) {
-        // IMPORTANTE: usa o nome canônico retornado pelo servidor,
-        // não o nome como o aluno digitou. Garante consistência.
         _studentName = data.canonical_name;
 
-        // Atualiza o input com o nome canônico e trava o campo
         const nameInput = document.getElementById("input-student-name");
         if (nameInput) {
           nameInput.value = _studentName;
@@ -189,11 +181,9 @@ const Session = (() => {
   function _updateCounter() {
     const n = _choices.length;
 
-    // Texto do contador
     const countEl = document.getElementById("count-current");
     if (countEl) countEl.textContent = n;
 
-    // Pips visuais na barra
     for (let i = 1; i <= 4; i++) {
       const pip = document.getElementById(`pip-${i}`);
       if (!pip) continue;
@@ -203,14 +193,12 @@ const Session = (() => {
 
       pip.classList.toggle("filled", shouldFill);
 
-      // Anima apenas quando um pip NOVO é preenchido
       if (shouldFill && !wasFilled) {
         pip.classList.add("pop");
         pip.addEventListener("animationend", () => pip.classList.remove("pop"), { once: true });
       }
     }
 
-    // Habilita/desabilita botão Concluir
     const btnConclude = document.getElementById("btn-conclude");
     if (btnConclude) {
       btnConclude.disabled = n < 4;
@@ -220,18 +208,61 @@ const Session = (() => {
 
   // ── Callback ao completar as 4 escolhas ───────────────────
   function _onCompleted() {
-    // Confete!
     if (typeof confetti === "function") {
+      // ── Estratégia de confetti localizado ─────────────────
+      // Em vez de cair do topo da tela inteira (origin y:0),
+      // calculamos a posição real do contador na barra para
+      // que o burst parta de onde o aluno acabou de ver o
+      // quarto pip acender. Isso conecta visualmente o efeito
+      // à ação que o causou.
+      //
+      // getBoundingClientRect() retorna coordenadas em px
+      // relativas ao viewport. confetti() espera valores
+      // normalizados 0–1 (x: 0=esquerda, 1=direita; y: idem).
+      const counter = document.getElementById("choice-counter");
+      const origin  = { x: 0.85, y: 0.04 }; // fallback: canto superior direito
+
+      if (counter) {
+        const rect = counter.getBoundingClientRect();
+        origin.x = (rect.left + rect.width  / 2) / window.innerWidth;
+        origin.y = (rect.top  + rect.height / 2) / window.innerHeight;
+      }
+
+      // Paleta alinhada com as variáveis CSS do tema —
+      // as mesmas cores das categorias de elementos.
+      const palette = ["#ffd43b", "#4dabf7", "#da77f2", "#63e6be", "#ffa94d"];
+
+      // Primeiro burst: saída rápida e concentrada —
+      // simula uma "explosão" saindo do ponto de origem.
       confetti({
-        particleCount: 180,
-        spread: 90,
-        origin: { y: 0.6 },
-        colors: ["#4dabf7", "#da77f2", "#51cf66", "#ffa94d", "#ff6b6b"],
+        particleCount: 60,
+        spread:        50,
+        startVelocity: 28,
+        decay:         0.92,
+        origin,
+        colors:        palette,
+        ticks:         200,
       });
+
+      // Segundo burst com delay: partículas mais lentas e
+      // espalhadas que "flutuam" depois do impacto inicial.
+      // O resultado é um efeito de dois tempos — rápido + suave —
+      // que parece orgânico em vez de programado.
+      setTimeout(() => {
+        confetti({
+          particleCount: 40,
+          spread:        80,
+          startVelocity: 14,
+          decay:         0.94,
+          origin,
+          colors:        palette,
+          ticks:         250,
+          scalar:        0.9, // partículas um pouco menores no segundo burst
+        });
+      }, 180);
     }
 
-    // Toast de conclusão
-    _showToast("🎉 Você escolheu 4 elementos! Clique em Concluir na barra acima.");
+    _showToast("🎉 Você escolheu 4 elementos! Clique em Concluir para finalizar.");
   }
 
   function _showToast(message) {
@@ -252,13 +283,12 @@ const Session = (() => {
     verifyName,
     chooseElement,
 
-    // Getters — expõe estado como read-only
-    get sessionId()   { return _sessionId; },
-    get sessionCode() { return _sessionCode; },
-    get studentName() { return _studentName; },
-    get confirmed()   { return _confirmed; },
-    get choices()     { return [..._choices]; },      // cópia defensive, nunca a referência
-    get choicesCount(){ return _choices.length; },
+    get sessionId()      { return _sessionId; },
+    get sessionCode()    { return _sessionCode; },
+    get studentName()    { return _studentName; },
+    get confirmed()      { return _confirmed; },
+    get choices()        { return [..._choices]; },
+    get choicesCount()   { return _choices.length; },
     get isNameVerified() { return _studentName !== null; },
   };
 })();
