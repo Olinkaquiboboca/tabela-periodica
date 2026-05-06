@@ -4,6 +4,10 @@
 // Layout: 2 imagens por página, 2 páginas = 4 imagens totais.
 // Cada imagem ocupa metade da página A4 (com margens).
 //
+// Correção de proporção: as imagens são redimensionadas com
+// aspect-ratio fit (equivalente ao object-fit: contain do CSS),
+// evitando achatamento independentemente das dimensões originais.
+//
 // Requisito do Cloudinary: CORS configurado para o domínio
 // exato do GitHub Pages (não "*"). Sem isso, o fetch falha.
 // ============================================================
@@ -26,18 +30,20 @@ async function generatePDF(elementNumbers, studentName, sessionCode) {
     format:      "a4",
   });
 
-  const PAGE_W  = 210;
-  const PAGE_H  = 297;
-  const MARGIN  = 12;  // mm de margem
-  const FOOTER_H = 10; // mm reservados para o rodapé
+  const PAGE_W   = 210;
+  const PAGE_H   = 297;
+  const MARGIN   = 12;  // mm de margem lateral e entre células
+  const FOOTER_H = 10;  // mm reservados para o rodapé
 
-  // Célula de imagem: metade da página menos margens
+  // Célula de imagem: metade da página menos margens.
+  // CELL_W × CELL_H define o bounding box máximo de cada imagem —
+  // a imagem vai preencher o máximo possível desse espaço sem distorcer.
   const CELL_W = PAGE_W - 2 * MARGIN;
   const CELL_H = (PAGE_H - FOOTER_H - 3 * MARGIN) / 2;
 
-  // Carrega todas as 4 imagens em paralelo antes de montar o PDF
-  // Isso garante que o PDF só é gerado quando todas as imagens estão prontas.
-  // Se uma falhar, continua com placeholder para não bloquear o fluxo.
+  // Carrega todas as 4 imagens em paralelo antes de montar o PDF.
+  // Promise.allSettled garante que o PDF é gerado mesmo se alguma
+  // imagem falhar — o slot recebe um placeholder visual no lugar.
   const imageResults = await Promise.allSettled(
     elementNumbers.map(num => _loadImageAsDataURL(num))
   );
@@ -49,18 +55,42 @@ async function generatePDF(elementNumbers, studentName, sessionCode) {
     for (let slot = 0; slot < 2; slot++) {
       const idx    = page * 2 + slot;
       const result = imageResults[idx];
+
+      // Posição do canto superior esquerdo da célula desta imagem
       const x = MARGIN;
       const y = MARGIN + slot * (CELL_H + MARGIN);
 
       if (result.status === "fulfilled" && result.value?.dataURL) {
-        const { dataURL, format } = result.value;
+        const { dataURL, format, naturalWidth, naturalHeight } = result.value;
+
+        // ── Cálculo de proporção (aspect-ratio fit) ────────────
+        // Queremos a maior imagem que caiba dentro de CELL_W × CELL_H
+        // sem distorcer. A lógica é:
+        //   1. Tenta preencher pela largura (drawH = CELL_W / ratio).
+        //   2. Se a altura resultante não couber na célula,
+        //      limita pela altura e recalcula a largura.
+        // Isso é o equivalente exato do CSS: object-fit: contain.
+        const ratio = naturalWidth / naturalHeight;
+        let drawW = CELL_W;
+        let drawH = CELL_W / ratio;
+
+        if (drawH > CELL_H) {
+          drawH = CELL_H;
+          drawW = CELL_H * ratio;
+        }
+
+        // Centraliza a imagem dentro da célula em ambos os eixos,
+        // distribuindo o espaço sobrante igualmente nos dois lados.
+        const offsetX = x + (CELL_W - drawW) / 2;
+        const offsetY = y + (CELL_H - drawH) / 2;
+
         doc.addImage(
           dataURL,
           format,
-          x, y,
-          CELL_W, CELL_H,
-          undefined,   // alias
-          "FAST"       // compression
+          offsetX, offsetY,  // posição centralizada
+          drawW, drawH,       // dimensões respeitando proporção
+          undefined,          // alias (não usado)
+          "FAST"              // compressão
         );
       } else {
         // Placeholder para imagem que falhou ao carregar
@@ -115,6 +145,9 @@ async function generatePDF(elementNumbers, studentName, sessionCode) {
 }
 
 // ── Carrega imagem como Data URL ──────────────────────────────
+// Além do dataURL e do formato, agora retorna também as dimensões
+// naturais da imagem (naturalWidth e naturalHeight), que são
+// necessárias para o cálculo de proporção no PDF.
 async function _loadImageAsDataURL(elementNumber) {
   // Busca a URL do Cloudinary no banco
   const { data, error } = await window._supabase
@@ -136,17 +169,35 @@ async function _loadImageAsDataURL(elementNumber) {
     throw new Error(`Falha ao carregar imagem: HTTP ${res.status}`);
   }
 
-  const blob      = await res.blob();
-  const format    = blob.type.includes("png") ? "PNG" : "JPEG";
-  const dataURL   = await _blobToDataURL(blob);
+  const blob    = await res.blob();
+  const format  = blob.type.includes("png") ? "PNG" : "JPEG";
+  const dataURL = await _blobToDataURL(blob);
 
-  return { dataURL, format };
+  // Lê as dimensões reais decodificando a imagem num <img> temporário.
+  // Isso é feito DEPOIS do fetch para não duplicar o download —
+  // usamos o dataURL que já temos, sem ir ao Cloudinary de novo.
+  const dims = await _getImageDimensions(dataURL);
+
+  return { dataURL, format, naturalWidth: dims.w, naturalHeight: dims.h };
 }
 
-// Converte Blob para Data URL via FileReader
+// ── Lê as dimensões naturais de uma imagem a partir do seu dataURL ──
+// Cria um elemento <img> em memória (fora do DOM), aguarda o
+// evento onload (que garante que as dimensões estão disponíveis),
+// e resolve a Promise com { w, h }.
+function _getImageDimensions(dataURL) {
+  return new Promise((resolve, reject) => {
+    const img    = new Image();
+    img.onload  = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => reject(new Error("Falha ao ler dimensões da imagem"));
+    img.src      = dataURL;
+  });
+}
+
+// ── Converte Blob para Data URL via FileReader ────────────────
 function _blobToDataURL(blob) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+    const reader     = new FileReader();
     reader.onloadend = () => resolve(reader.result);
     reader.onerror   = () => reject(new Error("Falha na leitura do blob"));
     reader.readAsDataURL(blob);
