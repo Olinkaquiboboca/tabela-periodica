@@ -553,3 +553,76 @@
   box-shadow: 0 4px 20px var(--accent-glow);
   transform: translateY(-1px);
 }
+
+/* ============================================================
+   PATCH DE ANIMAÇÃO — adicionar ao final do modal.css existente
+   
+   Estas regras ativam os @keyframes definidos em main.css.
+   O JS em modal.js gerencia as classes .is-open e .is-closing
+   no elemento #element-overlay.
+   
+   Por que separar aqui em vez de colocar no main.css?
+   Porque as regras de animação do overlay e do modal interno
+   dependem da estrutura específica do modal (qual filho anima,
+   qual duração usar), então pertencem ao escopo do modal.css.
+   As definições de @keyframes ficam em main.css porque são
+   reutilizáveis globalmente — essa separação é intencional.
+   ============================================================ */
+
+/* ── Overlay escuro ──────────────────────────────────────────
+   .is-open: aciona o fade-in do fundo escurecido.
+   Sem esta regra, remover .hidden já mostraria o overlay
+   mas sem transição — piscaria instantaneamente.               */
+.overlay.is-open {
+  animation: overlayFadeIn var(--dur-normal) ease both;
+}
+
+/* ── Saída do overlay ────────────────────────────────────────
+   .is-closing: fade reverso. O JS aplica .hidden após 260ms
+   (alinhado com --dur-normal) para só ocultar quando a
+   animação terminar.                                           */
+.overlay.is-closing {
+  animation: overlayFadeOut var(--dur-normal) ease both;
+}
+
+@keyframes overlayFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ── Modal interno — entrada ─────────────────────────────────
+   O seletor é específico: só anima quando o OVERLAY tem
+   .is-open, não o modal diretamente. Isso garante que a
+   animação dispara no momento certo, junto com o overlay.
+   
+   scale(0.96) → scale(1): a caixa parece "expandir" do ponto
+   de clique, que é mais físico do que descer do topo.         */
+.overlay.is-open .modal {
+  animation: modalEnter var(--dur-normal) var(--ease-out-back) both;
+}
+
+/* ── Modal interno — saída ───────────────────────────────────
+   Escala para baixo de 1 → 0.96 enquanto some.
+   Duração idêntica ao overlay para sincronizar.               */
+.overlay.is-closing .modal {
+  animation: modalLeave var(--dur-normal) ease both;
+}
+
+@keyframes modalLeave {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+}
+
+/* ── Feedback de verificação de nome ─────────────────────────
+   A classe .feedback-animated é adicionada/removida pelo JS
+   em _setFeedback() para reiniciar a animação a cada nova
+   mensagem. O fadeSlideUp está definido em main.css.          */
+.feedback-msg.feedback-animated {
+  animation: fadeSlideUp var(--dur-normal) var(--ease-out-circ) both;
+}
