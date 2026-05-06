@@ -202,15 +202,8 @@
             </button>
           </div>
 
-          <!-- Input invisível compartilhado por todos os cards -->
-          <input
-            type="file"
-            id="elem-file-input"
-            accept="image/jpeg,image/png,image/webp"
-            style="display:none"
-          >
-
           <!-- Grade de cards dos elementos -->
+          <!-- Cada card renderiza seu próprio <input type="file"> internamente via JS -->
           <div id="elements-upload-grid" class="elements-upload-grid">
             <div class="elements-loading">Carregando elementos…</div>
           </div>
