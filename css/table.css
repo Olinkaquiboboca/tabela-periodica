@@ -80,6 +80,7 @@
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease;
+  z-index: 5; /* acima de tudo, incluindo a imagem */
 }
 .element-cell:hover::after {
   opacity: 1;
@@ -112,7 +113,41 @@
 .element-cell:hover.cat-gas-nobre           { background: color-mix(in srgb, var(--cat-gas-nobre) 30%, var(--bg-card)); }
 
 /* ============================================================
-   CONTEÚDO DA CÉLULA
+   IMAGEM DE FUNDO DA CÉLULA (Cloudinary)
+
+   Fica em z-index: 2, cobrindo os textos (z-index: 1) por padrão.
+   Quando o elemento é escolhido, o CSS a esconde via opacity: 0
+   e os textos ficam visíveis novamente.
+   ============================================================ */
+.cell-bg-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  z-index: 2;               /* cobre os textos que estão em z-index: 1 */
+  pointer-events: none;
+  opacity: 0;               /* começa invisível; JS sobe para 1 após onload */
+  transition: opacity 0.4s ease;
+}
+
+/* Quando escolhido (por mim ou por outro), a imagem some */
+.element-cell.chosen-mine  .cell-bg-image,
+.element-cell.chosen-other .cell-bg-image {
+  opacity: 0 !important;
+}
+
+/* ============================================================
+   CONTEÚDO DA CÉLULA (número, símbolo, nome)
+
+   z-index: 1 = ficam ABAIXO da imagem por padrão (escondidos).
+   opacity: 0 = invisíveis enquanto a imagem os cobre.
+   Quando a imagem some (chosen-*), opacity volta a 1.
+
+   IMPORTANTE: as regras de opacity aqui substituem completamente
+   as regras antigas de opacity: 0.8 no .cell-number etc.
+   Não duplique essas declarações em nenhum outro lugar do arquivo.
    ============================================================ */
 .cell-number {
   display: block;
@@ -120,7 +155,10 @@
   font-size: 8px;
   color: var(--text-muted);
   line-height: 1;
-  opacity: 0.8;
+  position: relative;
+  z-index: 1;
+  opacity: 0;               /* oculto enquanto a imagem cobre a célula */
+  transition: opacity 0.3s ease;
 }
 
 .cell-symbol {
@@ -133,6 +171,10 @@
   margin: 1px 0;
   color: var(--cell-color, var(--text));
   text-shadow: 0 0 12px color-mix(in srgb, var(--cell-color, transparent) 50%, transparent);
+  position: relative;
+  z-index: 1;
+  opacity: 0;               /* oculto enquanto a imagem cobre a célula */
+  transition: opacity 0.3s ease;
 }
 
 .cell-name {
@@ -144,6 +186,28 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   line-height: 1.2;
+  position: relative;
+  z-index: 1;
+  opacity: 0;               /* oculto enquanto a imagem cobre a célula */
+  transition: opacity 0.3s ease;
+}
+
+/* Revela os textos quando o elemento foi escolhido (imagem sumiu) */
+.element-cell.chosen-mine .cell-number,
+.element-cell.chosen-mine .cell-symbol,
+.element-cell.chosen-mine .cell-name,
+.element-cell.chosen-other .cell-number,
+.element-cell.chosen-other .cell-symbol,
+.element-cell.chosen-other .cell-name {
+  opacity: 1;
+  z-index: 4; /* acima da imagem e do ::before */
+}
+
+/* Fallback: célula sem imagem (falha no Cloudinary) mostra os textos normalmente */
+.element-cell:not(:has(.cell-bg-image)) .cell-number,
+.element-cell:not(:has(.cell-bg-image)) .cell-symbol,
+.element-cell:not(:has(.cell-bg-image)) .cell-name {
+  opacity: 1;
 }
 
 /* ============================================================
@@ -160,7 +224,7 @@
   text-shadow: 0 0 16px var(--accent-glow);
 }
 
-/* Checkmark no canto do elemento escolhido */
+/* Checkmark no canto do elemento escolhido por mim */
 .element-cell.chosen-mine::before {
   content: '✓';
   position: absolute;
@@ -194,7 +258,7 @@
   z-index: 3;
 }
 
-/* Máscara reveladora */
+/* Máscara reveladora (mantida para compatibilidade) */
 .element-mask {
   position: absolute;
   inset: 0;
@@ -272,67 +336,4 @@
 
 .element-cell {
   animation: cellFadeIn 0.3s ease both;
-}
-
-/* ============================================================
-   IMAGEM DE FUNDO DA CÉLULA (Cloudinary)
-   Visível por padrão; some quando o elemento é escolhido.
-   ============================================================ */
-.cell-bg-image {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: inherit;
-  z-index: 2;
-  pointer-events: none;
-  opacity: 0; /* começa invisível; o JS sobe para 1 após onload */
-  transition: opacity 0.4s ease;
-}
-
-/* Quando escolhido, a imagem some — o CSS faz isso automaticamente
-   pela presença das classes abaixo */
-.element-cell.chosen-mine  .cell-bg-image,
-.element-cell.chosen-other .cell-bg-image {
-  opacity: 0 !important;
-  pointer-events: none;
-}
-
-/* ============================================================
-   TEXTOS DA CÉLULA (número, símbolo, nome)
-   Ficam OCULTOS enquanto a imagem está visível (não escolhido).
-   Aparecem quando o elemento é escolhido (imagem some).
-   ============================================================ */
-.cell-number,
-.cell-symbol,
-.cell-name {
-  position: relative;
-  z-index: 1; /* abaixo da imagem (z-index: 2) por padrão */
-  opacity: 0; /* invisível enquanto a imagem cobre a célula */
-  transition: opacity 0.3s ease;
-}
-
-/* Quando escolhido por MIM: revela os textos acima da imagem */
-.element-cell.chosen-mine .cell-number,
-.element-cell.chosen-mine .cell-symbol,
-.element-cell.chosen-mine .cell-name {
-  opacity: 1;
-  z-index: 4; /* acima da imagem e do ::before */
-}
-
-/* Quando escolhido por OUTRO: também revela os textos */
-.element-cell.chosen-other .cell-number,
-.element-cell.chosen-other .cell-symbol,
-.element-cell.chosen-other .cell-name {
-  opacity: 1;
-  z-index: 4;
-}
-
-/* Fallback: se a célula não tiver imagem (onerror removeu o img),
-   os textos precisam aparecer normalmente */
-.element-cell:not(:has(.cell-bg-image)) .cell-number,
-.element-cell:not(:has(.cell-bg-image)) .cell-symbol,
-.element-cell:not(:has(.cell-bg-image)) .cell-name {
-  opacity: 1;
 }
