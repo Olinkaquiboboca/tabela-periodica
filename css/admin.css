@@ -620,3 +620,375 @@
 @keyframes elem-spin {
   to { transform: rotate(360deg); }
 }
+
+/* ============================================================
+   ELEMENTOS — SEÇÃO DE UPLOAD DE IMAGENS
+   Adicione este bloco ao final de admin.css
+   ============================================================ */
+
+/* Barra de progresso geral */
+.elements-progress-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.elements-progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.elements-progress-pct {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.elements-progress-track {
+  height: 6px;
+  background: var(--bg-raised);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.elements-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #74c0fc);
+  border-radius: 99px;
+  width: 0%;
+  transition: width 0.5s ease;
+}
+
+/* Filtros */
+.elements-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.elements-filter-btn {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.elements-filter-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.elements-filter-btn.active {
+  background: rgba(77, 171, 247, 0.10);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Grade de cards */
+.elements-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.elements-loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Card individual de elemento */
+.elem-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.elem-card:hover {
+  border-color: var(--border-glow);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Card com imagem tem destaque sutil */
+.elem-card.has-image {
+  border-color: rgba(77, 171, 247, 0.2);
+}
+
+/* Área clicável de imagem */
+.elem-card-image-wrap {
+  position: relative;
+  aspect-ratio: 1;
+  cursor: pointer;
+  overflow: hidden;
+  background: var(--bg-raised);
+}
+
+/* Thumbnail quando tem imagem */
+.elem-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--transition);
+}
+
+.elem-card-image-wrap:hover .elem-card-img {
+  transform: scale(1.04);
+}
+
+/* Placeholder quando não tem imagem */
+.elem-card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: var(--bg-raised);
+}
+
+/* Overlay aparece no hover para indicar que é clicável */
+.elem-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 8, 18, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.elem-card-image-wrap:hover .elem-card-overlay {
+  opacity: 1;
+}
+
+/* Informações do elemento (número, símbolo, nome) */
+.elem-card-info {
+  padding: 8px 10px 4px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+}
+
+.elem-card-number {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+}
+
+.elem-card-symbol {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.elem-card-name {
+  font-size: 10px;
+  color: var(--text-muted);
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+/* Botão de upload dentro do card */
+.elem-upload-btn {
+  margin: 4px 8px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.elem-upload-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(77, 171, 247, 0.06);
+}
+
+.elem-upload-btn.uploading {
+  border-color: var(--accent);
+  color: var(--accent);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Spinner de carregamento dentro do botão */
+.elem-upload-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgba(77, 171, 247, 0.3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: elem-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes elem-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   IMPORTAÇÃO EM LOTE — botão flutuante e painel de progresso
+   ============================================================ */
+
+/* Botão flutuante fixo no canto superior direito da seção */
+.bulk-upload-fab {
+  position: sticky;
+  top: 16px;
+  float: right;
+  z-index: 10;
+  background: var(--accent);
+  color: #060a12;
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 18px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: 0 4px 16px rgba(77, 171, 247, 0.3);
+  margin-bottom: 16px;
+}
+
+.bulk-upload-fab:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 20px rgba(77, 171, 247, 0.45);
+}
+
+/* Estado "cancelar" — vermelho para comunicar perigo */
+.bulk-upload-fab.running {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(255, 99, 99, 0.3);
+}
+
+/* Painel de progresso — aparece abaixo do botão durante o lote */
+#bulk-progress-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 24px;
+  clear: both;
+}
+
+.bulk-progress-header-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+#bulk-progress-header {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.bulk-panel-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  transition: color var(--transition);
+}
+
+.bulk-panel-close:hover {
+  color: var(--text);
+}
+
+/* Avisos de arquivos não encontrados ou inválidos */
+.bulk-warning {
+  font-size: 12px;
+  color: #ffa94d;
+  background: rgba(255, 169, 77, 0.08);
+  border: 1px solid rgba(255, 169, 77, 0.2);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+/* Lista scrollável de itens em processamento */
+.bulk-progress-list {
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bulk-progress-item {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  transition: background var(--transition);
+}
+
+/* Estados visuais dos itens */
+.bulk-uploading {
+  background: rgba(77, 171, 247, 0.08);
+  color: var(--accent);
+}
+
+.bulk-success {
+  background: rgba(81, 207, 102, 0.08);
+  color: var(--success);
+}
+
+.bulk-error {
+  background: rgba(255, 99, 99, 0.08);
+  color: var(--danger);
+}
