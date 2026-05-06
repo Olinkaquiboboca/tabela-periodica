@@ -168,8 +168,34 @@
           </div>
         </section>
 
-        <!-- ELEMENTOS — substitui o bloco section#section-elements inteiro no admin.html -->
+        <!-- ELEMENTOS — seção completa com importação em lote -->
         <section id="section-elements" class="admin-content-section hidden">
+
+          <!-- Botão flutuante de importação em lote -->
+          <!-- O input[multiple] aceita qualquer quantidade de arquivos de uma vez -->
+          <input
+            type="file"
+            id="bulk-file-input"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            style="display:none"
+          >
+          <button id="btn-bulk-upload" class="bulk-upload-fab" data-mode="select">
+            ⬆ Importar imagens
+          </button>
+
+          <!-- Painel de progresso do lote (oculto até o lote começar) -->
+          <div id="bulk-progress-panel" style="display:none">
+            <div class="bulk-progress-header-wrap">
+              <span id="bulk-progress-header">Processando…</span>
+              <button
+                class="bulk-panel-close"
+                id="btn-bulk-panel-close"
+              >✕</button>
+            </div>
+            <div id="bulk-warnings"></div>
+            <div id="bulk-progress-list" class="bulk-progress-list"></div>
+          </div>
 
           <!-- Cabeçalho com progresso geral -->
           <div class="admin-section-title">Imagens dos Elementos</div>
@@ -203,7 +229,7 @@
           </div>
 
           <!-- Grade de cards dos elementos -->
-          <!-- Cada card renderiza seu próprio <input type="file"> internamente via JS -->
+          <!-- Cada card renderiza seu próprio <input type="file"> via JS -->
           <div id="elements-upload-grid" class="elements-upload-grid">
             <div class="elements-loading">Carregando elementos…</div>
           </div>
