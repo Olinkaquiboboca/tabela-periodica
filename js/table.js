@@ -4,9 +4,7 @@
 // Layout IUPAC padrão: 18 colunas, 10 linhas.
 // Os dados de layout são estáticos (não buscados do banco) para
 // evitar requisição extra no carregamento.
-// Os dados de imagem/cloudinary_url vêm do banco em lote na
-// inicialização e são exibidos nas células por padrão.
-// A imagem SOME quando o elemento é escolhido, revelando o ícone.
+// Os dados de imagem/cloudinary_url vêm do banco sob demanda.
 // ============================================================
 
 // Lookup rápido por número de elemento
@@ -39,8 +37,6 @@ function renderTable() {
     cell.style.gridRow    = el.row;
     cell.style.gridColumn = el.col;
 
-    // O ícone de texto (número, símbolo, nome) fica por baixo da imagem.
-    // Ele é revelado automaticamente quando a imagem desaparece ao escolher.
     cell.innerHTML = `
       <span class="cell-number">${el.number}</span>
       <span class="cell-symbol">${el.symbol}</span>
@@ -57,47 +53,6 @@ function renderTable() {
     });
 
     grid.appendChild(cell);
-  });
-}
-
-// ── Carregamento em lote das imagens do Cloudinary ────────────
-// Busca todas as cloudinary_url numa única query e injeta uma
-// <img class="cell-bg-image"> em cada célula correspondente.
-// A imagem fica visível por padrão; o CSS a esconde quando as
-// classes chosen-mine ou chosen-other são aplicadas.
-async function loadElementImages() {
-  const { data, error } = await window._supabase
-    .from("elements")
-    .select("number, cloudinary_url");
-
-  if (error) {
-    console.warn("[table.js] Erro ao carregar imagens:", error.message);
-    return;
-  }
-
-  if (!data) return;
-
-  data.forEach(({ number, cloudinary_url }) => {
-    if (!cloudinary_url) return;
-
-    const cell = document.querySelector(`.element-cell[data-number="${number}"]`);
-    if (!cell) return;
-
-    const img = document.createElement("img");
-    img.src = cloudinary_url;
-    img.alt = ""; // decorativa — o aria-label da célula já descreve o elemento
-    img.className = "cell-bg-image";
-    img.setAttribute("aria-hidden", "true");
-
-    // Começa invisível e aparece suavemente após carregar,
-    // evitando flash de imagem quebrada em caso de falha de rede.
-    img.style.opacity = "0";
-    img.onload  = () => { img.style.opacity = "1"; };
-    img.onerror = () => { img.remove(); }; // se falhar, remove e mostra só o ícone
-
-    // Insere ANTES dos spans de texto para que fique abaixo deles no DOM,
-    // mas o z-index no CSS é quem controla a sobreposição visual de fato.
-    cell.insertBefore(img, cell.firstChild);
   });
 }
 
@@ -126,8 +81,6 @@ function onCellClick(elementNumber) {
 }
 
 // ── Marca um elemento como escolhido ──────────────────────────
-// Ao adicionar chosen-mine ou chosen-other, o CSS esconde
-// automaticamente a .cell-bg-image, revelando o ícone de texto.
 function markElementTaken(elementNumber, isMine = false) {
   if (takenElements.has(elementNumber)) return; // já marcado
 
@@ -178,10 +131,7 @@ async function loadInitialState() {
 }
 
 // ── Ponto de entrada ──────────────────────────────────────────
-// loadInitialState e loadElementImages são independentes entre si,
-// então rodamos em paralelo com Promise.all para reduzir o tempo
-// total de inicialização à metade comparado a awaits sequenciais.
 async function initTable() {
   renderTable();
-  await Promise.all([loadInitialState(), loadElementImages()]);
+  await loadInitialState();
 }
