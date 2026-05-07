@@ -4,12 +4,9 @@
 // Gerencia abertura, fechamento, verificação de nome e
 // escolha de elemento. Comunica com Session para operações
 // que requerem validação server-side.
-//
-// ANIMAÇÕES: todas as transições são CSS-driven — este arquivo
-// apenas adiciona/remove classes e escuta animationend.
-// Os @keyframes vivem em main.css para ficarem centralizados.
 // ============================================================
 
+// Mapa de cores por categoria (para aplicar no modal)
 const CATEGORY_COLORS = {
   "alcali":             "var(--cat-alcali)",
   "alcalino-terroso":   "var(--cat-alcalino-terroso)",
@@ -39,7 +36,7 @@ const CATEGORY_LABELS = {
 const Modal = (() => {
   let _currentElementNumber = null;
   let _isProcessing = false;
-  let _closeAnimTimeout = null; // guarda o timeout do close animado
+  let _nameVerifyTimeout = null;
 
   // ── Referências DOM ───────────────────────────────────────
   const overlay     = () => document.getElementById("element-overlay");
@@ -56,14 +53,6 @@ const Modal = (() => {
 
   // ── Abertura do modal ─────────────────────────────────────
   async function open(elementNumber, options = {}) {
-    // Cancela qualquer close animado que ainda esteja pendente.
-    // Isso evita um bug raro: abrir rapidamente após fechar
-    // poderia re-aplicar .hidden no meio da abertura.
-    if (_closeAnimTimeout) {
-      clearTimeout(_closeAnimTimeout);
-      _closeAnimTimeout = null;
-    }
-
     _currentElementNumber = elementNumber;
     _isProcessing = false;
 
@@ -73,47 +62,43 @@ const Modal = (() => {
     const { isMine = false } = options;
     const isTaken = takenElements.has(elementNumber) && !isMine;
 
+    // Aplica cor da categoria ao modal
     const color = CATEGORY_COLORS[el.category] ?? "var(--accent)";
     modal().style.setProperty("--modal-cat-color", color);
 
-    document.getElementById("modal-element-number").textContent   = el.number;
-    document.getElementById("modal-element-symbol").textContent   = el.symbol;
-    document.getElementById("modal-element-name").textContent     = el.name_pt;
+    // Preenche dados do elemento
+    document.getElementById("modal-element-number").textContent = el.number;
+    document.getElementById("modal-element-symbol").textContent = el.symbol;
+    document.getElementById("modal-element-name").textContent   = el.name_pt;
     document.getElementById("modal-element-category").textContent = CATEGORY_LABELS[el.category] ?? el.category;
     document.getElementById("placeholder-symbol-text").textContent = el.symbol;
 
+    // Atualiza o botão de escolha
     const countDisplay = document.getElementById("btn-count-display");
-    if (countDisplay) countDisplay.textContent = `(${Session.choicesCount}/4)`;
+    if (countDisplay) {
+      countDisplay.textContent = `(${Session.choicesCount}/4)`;
+    }
 
+    // Controla visibilidade de seções baseado no estado
     _setModalState(isMine, isTaken);
+
+    // Carrega imagem do Cloudinary (async, não bloqueia abertura)
     _loadElementImage(elementNumber);
 
+    // Restaura o nome já verificado (se houver)
     if (Session.isNameVerified) {
       nameInput().value    = Session.studentName;
       nameInput().disabled = true;
-      if (!isMine && !isTaken) _enableChooseButton();
+      if (!isMine && !isTaken) {
+        _enableChooseButton();
+      }
     }
 
-    // ── Animação de entrada ───────────────────────────────
-    // 1. Remove .hidden para colocar os elementos no DOM
-    //    (display passa de none para flex/block).
-    // 2. No próximo frame de renderização, adiciona .is-open
-    //    que dispara os @keyframes definidos no CSS.
-    //
-    // O requestAnimationFrame duplo existe porque o browser
-    // precisa de ao menos um frame para calcular o layout
-    // após remover display:none — sem ele, a animação começa
-    // do estado final e não é percebida.
+    // Exibe o overlay com animação
     overlay().classList.remove("hidden");
     overlay().setAttribute("aria-hidden", "false");
-    overlay().classList.remove("is-closing"); // garante estado limpo
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        overlay().classList.add("is-open");
-      });
-    });
-
+    // Foca no input de nome se não verificado, ou no botão se já verificado
     requestAnimationFrame(() => {
       if (Session.isNameVerified && !isMine && !isTaken) {
         btnAdvance()?.focus();
@@ -131,20 +116,24 @@ const Modal = (() => {
     const mine    = mineMsg();
     const btn     = btnAdvance();
 
+    // Oculta tudo inicialmente
     taken?.classList.add("hidden");
     mine?.classList.add("hidden");
     btn && (btn.disabled = true);
     _setFeedback("", "");
 
     if (isMine) {
+      // Elemento já meu: mostra mensagem de confirmação, oculta form/botão
       form?.classList.add("hidden");
       actions?.classList.add("hidden");
       mine?.classList.remove("hidden");
     } else if (isTaken) {
+      // Elemento de outro: mostra mensagem de ocupado, oculta form/botão
       form?.classList.add("hidden");
       actions?.classList.add("hidden");
       taken?.classList.remove("hidden");
     } else {
+      // Disponível: mostra form e botão normalmente
       form?.classList.remove("hidden");
       actions?.classList.remove("hidden");
     }
@@ -157,6 +146,7 @@ const Modal = (() => {
 
     if (!img || !placeholder) return;
 
+    // Esconde imagem, mostra placeholder
     img.style.display = "none";
     placeholder.style.display = "flex";
 
@@ -167,6 +157,7 @@ const Modal = (() => {
         .eq("number", elementNumber)
         .single();
 
+      // Verifica se o modal ainda está aberto para este elemento
       if (_currentElementNumber !== elementNumber) return;
 
       if (data?.cloudinary_url) {
@@ -176,6 +167,7 @@ const Modal = (() => {
           img.style.display = "block";
         };
         img.onerror = () => {
+          // Mantém o placeholder se a imagem falhar
           placeholder.style.display = "flex";
         };
         img.src = data.cloudinary_url;
@@ -198,60 +190,23 @@ const Modal = (() => {
   function _setFeedback(message, type) {
     const fb = feedback();
     if (!fb) return;
-
-    // ── Micro-slide no feedback ────────────────────────────
-    // Para que a animação fadeSlideUp dispare toda vez que
-    // uma nova mensagem aparece (não só na primeira),
-    // precisamos forçar um reflow antes de re-aplicar a
-    // classe de animação. Sem o reflow, o browser vê que
-    // a classe já está lá e não reinicia o @keyframe.
-    //
-    // A técnica clássica é:
-    //   1. Remover a classe de animação
-    //   2. Ler qualquer propriedade que force layout (offsetHeight)
-    //   3. Re-adicionar a classe
-    //
-    // O acesso a offsetHeight é um efeito colateral intencional —
-    // não um bug — e é amplamente documentado como a forma correta
-    // de reiniciar animações CSS.
-    fb.classList.remove("feedback-animated");
-    void fb.offsetHeight; // força reflow — necessário para reiniciar @keyframe
-    fb.classList.add("feedback-animated");
-
     fb.textContent = message;
-    fb.className = `feedback-msg feedback-animated ${type}`.trim();
+    fb.className = `feedback-msg ${type}`;
   }
 
   // ── Fechamento do modal ───────────────────────────────────
   function close() {
     _currentElementNumber = null;
+    overlay().classList.add("hidden");
+    overlay().setAttribute("aria-hidden", "true");
 
-    // ── Animação de saída ──────────────────────────────────
-    // Adicionamos .is-closing para disparar o @keyframe de saída
-    // (modalLeave) que está no modal.css. Só aplicamos .hidden
-    // — que força display:none — DEPOIS que a animação terminar.
-    //
-    // Usamos setTimeout com a duração da animação (--dur-normal
-    // = 260ms) como fallback confiável em vez de animationend,
-    // porque animationend pode não disparar se o elemento for
-    // re-aberto antes do close terminar (o timeout acima cancela).
-    //
-    // Duração alinhada com a variável CSS --dur-normal: 260ms.
-    overlay().classList.remove("is-open");
-    overlay().classList.add("is-closing");
-
-    _closeAnimTimeout = setTimeout(() => {
-      overlay().classList.add("hidden");
-      overlay().classList.remove("is-closing");
-      overlay().setAttribute("aria-hidden", "true");
-      _closeAnimTimeout = null;
-    }, 260);
-
+    // Limpa estado do form se o nome não foi verificado
     if (!Session.isNameVerified) {
       if (nameInput()) nameInput().value = "";
       _setFeedback("", "");
     }
 
+    // Restaura botão de verificar ao estado correto
     const vBtn = btnVerify();
     if (vBtn && !Session.isNameVerified) {
       vBtn.textContent = "Verificar";
@@ -260,7 +215,7 @@ const Modal = (() => {
     }
   }
 
-  // ── Verificação de nome ───────────────────────────────────
+  // ── Verificação de nome (com debounce) ───────────────────
   async function handleVerifyClick() {
     const name = nameInput()?.value.trim();
     if (!name || name.length < 2) {
@@ -310,10 +265,14 @@ const Modal = (() => {
     const result = await Session.chooseElement(_currentElementNumber);
 
     if (result.success) {
+      // Marca o elemento na tabela (o Realtime também vai pegar,
+      // mas marcamos localmente para feedback imediato)
       markElementTaken(_currentElementNumber, true);
-      // Delay pequeno para o aluno ver o pip acender antes do modal fechar
-      setTimeout(() => close(), 420);
+
+      // Fecha o modal com um pequeno delay para deixar o usuário ver o sucesso
+      setTimeout(() => close(), 400);
     } else {
+      // Erro: restaura botão e mostra feedback
       if (btn) {
         btn.disabled = false;
         btn.querySelector(".btn-advance-inner").innerHTML = `
@@ -324,7 +283,9 @@ const Modal = (() => {
       }
 
       if (result.code === "ELEMENT_TAKEN") {
+        // Outro aluno escolheu no mesmo momento (race condition)
         _setFeedback("⊗ Outro aluno acabou de escolher este elemento!", "invalid");
+        // Atualiza a UI da tabela para refletir o novo estado
         markElementTaken(_currentElementNumber, false);
         setTimeout(() => {
           _setModalState(false, true);
@@ -342,20 +303,25 @@ const Modal = (() => {
 
   // ── Event listeners ───────────────────────────────────────
   function _bindEvents() {
+    // Fechar ao clicar no botão X
     btnClose()?.addEventListener("click", close);
 
+    // Fechar ao clicar no overlay (fora do modal)
     overlay()?.addEventListener("click", (e) => {
       if (e.target === overlay()) close();
     });
 
+    // Fechar com Escape
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && !overlay().classList.contains("hidden")) {
         close();
       }
     });
 
+    // Verificar nome ao clicar no botão
     btnVerify()?.addEventListener("click", handleVerifyClick);
 
+    // Verificar nome ao pressionar Enter no input
     nameInput()?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -363,6 +329,7 @@ const Modal = (() => {
       }
     });
 
+    // Escolher elemento
     btnAdvance()?.addEventListener("click", handleAdvanceClick);
   }
 
