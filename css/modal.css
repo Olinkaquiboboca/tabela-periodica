@@ -1,5 +1,14 @@
 /* ============================================================
    OVERLAY BASE
+
+   O overlay usa position:fixed + inset:0 para cobrir a tela
+   inteira. O backdrop-filter cria o blur sobre a tabela.
+   
+   IMPORTANTE: as classes .is-open e .is-closing são gerenciadas
+   pelo modal.js e disparam os @keyframes definidos ao final
+   deste arquivo. A classe .hidden (display:none) só é aplicada
+   APÓS a animação de saída terminar — evita o "pisca" de
+   display:none instantâneo.
    ============================================================ */
 .overlay {
   position: fixed;
@@ -12,19 +21,17 @@
   justify-content: center;
   z-index: 2000;
   padding: 20px;
-  animation: overlayIn 0.2s ease;
-}
-
-@keyframes overlayIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
 }
 
 /* ============================================================
    MODAL BASE
+
+   Usa --bg-modal em vez de --bg-card para ter mais separação
+   visual sobre a tabela colorida. A diferença é sutil (~15%
+   mais claro), mas cria a hierarquia de profundidade correta.
    ============================================================ */
 .modal {
-  background: var(--bg-card);
+  background: var(--bg-modal);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 28px;
@@ -33,16 +40,14 @@
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
-  animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* A sombra cria profundidade — o modal "flutua" sobre o overlay.
+     Três camadas: sombra de elevação, borda de 1px quase invisível,
+     e reflexo interno na borda superior — técnica de "skeuomorphism
+     discreto" que dá materialidade sem parecer anos 2010. */
   box-shadow:
     0 24px 80px rgba(0, 0, 0, 0.7),
     0 0 0 1px rgba(255, 255, 255, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.92) translateY(12px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* ============================================================
@@ -62,13 +67,19 @@
   justify-content: center;
   cursor: pointer;
   color: var(--text-muted);
-  transition: all var(--transition);
+  transition:
+    background var(--dur-fast) ease,
+    color      var(--dur-fast) ease,
+    transform  var(--dur-fast) var(--ease-spring);
 }
 
+/* Rotação no hover do X — sutil, mas muito mais humano
+   do que só mudar a cor. Indica que é interativo. */
 .modal-close:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text);
   border-color: var(--text-dim);
+  transform: rotate(90deg);
 }
 
 /* ============================================================
@@ -90,7 +101,9 @@
   width: 64px;
   height: 64px;
   border-radius: 10px;
-  background: var(--bg-raised);
+  /* Usa --bg-modal-header para criar hierarquia interna:
+     header do badge é mais escuro que o body do modal */
+  background: var(--bg-modal-header);
   border: 1px solid var(--border);
   flex-shrink: 0;
   padding: 6px;
@@ -109,7 +122,9 @@
   font-weight: 700;
   line-height: 1.1;
   color: var(--modal-cat-color, var(--accent));
-  text-shadow: 0 0 20px color-mix(in srgb, var(--modal-cat-color, var(--accent)) 60%, transparent);
+  /* text-shadow usando color-mix para não precisar de valores
+     hardcoded — garante que o glow sempre use a cor da categoria */
+  text-shadow: 0 0 20px color-mix(in srgb, var(--modal-cat-color, var(--accent)) 50%, transparent);
 }
 
 .modal-element-info {
@@ -152,7 +167,7 @@
   aspect-ratio: 1;
   border-radius: 10px;
   overflow: hidden;
-  background: var(--bg-raised);
+  background: var(--bg-modal-header);
   border: 1px solid var(--border);
   margin-bottom: 20px;
 }
@@ -162,7 +177,7 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--dur-slow) ease;
 }
 
 .modal-image-placeholder {
@@ -171,15 +186,35 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-raised);
+  background: var(--bg-modal-header);
+  /* Grade técnica como fundo do placeholder —
+     mais interessante que fundo sólido, comunica "científico"
+     sem precisar de imagem externa (é CSS puro). */
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 19px,
+      rgba(100, 140, 200, 0.04) 19px,
+      rgba(100, 140, 200, 0.04) 20px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 19px,
+      rgba(100, 140, 200, 0.04) 19px,
+      rgba(100, 140, 200, 0.04) 20px
+    );
 }
 
+/* O símbolo grande no placeholder — opacidade baixa porque
+   é decorativo, não informacional (o header já tem o símbolo) */
 .placeholder-symbol {
   font-family: var(--font-mono);
   font-size: 80px;
   font-weight: 700;
   color: var(--modal-cat-color, var(--text-dim));
-  opacity: 0.15;
+  opacity: 0.12;
   user-select: none;
 }
 
@@ -215,13 +250,16 @@
   font-family: var(--font-sans);
   font-size: 15px;
   padding: 10px 14px;
-  transition: border-color var(--transition), box-shadow var(--transition);
+  transition:
+    border-color var(--dur-normal) ease,
+    box-shadow   var(--dur-normal) ease;
   outline: none;
   min-width: 0;
 }
 
 .input-wrapper input::placeholder { color: var(--text-dim); }
 
+/* Focus: borda acento + sombra de foco sem neon excessivo */
 .input-wrapper input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-glow);
@@ -242,7 +280,10 @@
   font-weight: 700;
   padding: 10px 12px;
   cursor: pointer;
-  transition: all var(--transition);
+  transition:
+    border-color var(--dur-normal) ease,
+    color        var(--dur-normal) ease,
+    background   var(--dur-normal) ease;
   white-space: nowrap;
   letter-spacing: 0.5px;
 }
@@ -256,18 +297,26 @@
   border-color: var(--success);
   color: var(--success);
   background: color-mix(in srgb, var(--success) 10%, transparent);
+  cursor: default; /* campo verificado não é clicável novamente */
 }
 
+/* ── Feedback de verificação ─────────────────────────────────
+   A classe .feedback-animated é gerenciada pelo modal.js para
+   reiniciar a animação fadeSlideUp a cada nova mensagem.
+   O @keyframe fadeSlideUp está em main.css.                   */
 .feedback-msg {
   display: block;
   font-size: 12px;
   margin-top: 8px;
   min-height: 18px;
-  transition: all 0.2s ease;
 }
 
 .feedback-msg.valid   { color: var(--success); }
 .feedback-msg.invalid { color: var(--danger); }
+
+.feedback-msg.feedback-animated {
+  animation: fadeSlideUp var(--dur-normal) var(--ease-out-circ) both;
+}
 
 /* ============================================================
    BOTÃO PRINCIPAL DO MODAL
@@ -283,17 +332,28 @@
   border-radius: var(--radius);
   padding: 14px;
   cursor: pointer;
-  transition: all 0.25s ease;
   font-size: 15px;
   font-weight: 600;
   font-family: var(--font-sans);
   color: #060a12;
+  transition:
+    filter    var(--dur-normal) ease,
+    transform var(--dur-fast)   var(--ease-spring),
+    box-shadow var(--dur-normal) ease,
+    opacity   var(--dur-normal) ease;
 }
 
+/* Hover: brightness ao invés de mudar a cor — preserva a
+   cor da categoria e ainda dá feedback claro de interatividade */
 .btn-advance:not(:disabled):hover {
-  filter: brightness(1.1);
-  box-shadow: 0 4px 20px color-mix(in srgb, var(--modal-cat-color, var(--accent)) 40%, transparent);
+  filter: brightness(1.12);
   transform: translateY(-1px);
+}
+
+/* Active: tátil rápido — parece que o botão é pressionado */
+.btn-advance:not(:disabled):active {
+  transform: translateY(0) scale(0.98);
+  transition-duration: var(--dur-fast);
 }
 
 .btn-advance:disabled {
@@ -321,7 +381,7 @@
 }
 
 /* ============================================================
-   MENSAGENS DE ESTADO
+   MENSAGENS DE ESTADO (tomado / meu)
    ============================================================ */
 .modal-taken, .modal-mine {
   display: flex;
@@ -332,6 +392,8 @@
   font-size: 14px;
   font-weight: 500;
   margin-top: 12px;
+  /* Entrada suave — aparece com fadeSlideUp quando revealed */
+  animation: fadeSlideUp var(--dur-normal) var(--ease-out-circ) both;
 }
 
 .modal-taken {
@@ -340,10 +402,11 @@
   color: var(--danger);
 }
 
+/* chosen-mine no modal usa âmbar — consistente com a célula na tabela */
 .modal-mine {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-  color: var(--accent);
+  background: color-mix(in srgb, var(--adopted) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--adopted) 30%, transparent);
+  color: var(--adopted);
 }
 
 .taken-icon, .mine-icon {
@@ -390,8 +453,11 @@
   gap: 4px;
   position: relative;
   overflow: hidden;
+  /* Entrada escalonada dos cards de conclusão */
+  animation: fadeSlideUp var(--dur-slow) var(--ease-out-circ) both;
 }
 
+/* Linha colorida no topo de cada card — usa a cor da categoria */
 .conclude-element-card::before {
   content: '';
   position: absolute;
@@ -442,7 +508,7 @@
 
 .warning-icon {
   font-size: 16px;
-  color: #ffa94d;
+  color: var(--cat-alcalino-terroso); /* âmbar quente — sinal de atenção */
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -468,13 +534,18 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition);
+  transition:
+    filter    var(--dur-normal) ease,
+    transform var(--dur-fast)   var(--ease-spring);
 }
 
 .btn-confirm-yes:hover {
   filter: brightness(1.1);
-  box-shadow: 0 4px 20px rgba(81, 207, 102, 0.3);
   transform: translateY(-1px);
+}
+
+.btn-confirm-yes:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .btn-confirm-no {
@@ -487,7 +558,9 @@
   font-family: var(--font-sans);
   font-size: 14px;
   cursor: pointer;
-  transition: all var(--transition);
+  transition:
+    border-color var(--dur-normal) ease,
+    color        var(--dur-normal) ease;
 }
 
 .btn-confirm-no:hover {
@@ -519,6 +592,7 @@
   align-items: center;
   justify-content: center;
   margin: 0 auto 12px;
+  animation: adoptPulse var(--dur-slow) var(--ease-spring) both;
 }
 
 .pdf-success h3 {
@@ -545,42 +619,37 @@
   font-size: 14px;
   font-weight: 600;
   font-family: var(--font-sans);
-  transition: all var(--transition);
+  transition:
+    filter    var(--dur-normal) ease,
+    transform var(--dur-fast)   var(--ease-spring);
 }
 
 .pdf-link:hover {
   filter: brightness(1.1);
-  box-shadow: 0 4px 20px var(--accent-glow);
   transform: translateY(-1px);
 }
 
 /* ============================================================
-   PATCH DE ANIMAÇÃO — adicionar ao final do modal.css existente
+   ANIMAÇÕES DO OVERLAY E MODAL
+   Controladas pelas classes .is-open e .is-closing
+   gerenciadas pelo modal.js.
    
-   Estas regras ativam os @keyframes definidos em main.css.
-   O JS em modal.js gerencia as classes .is-open e .is-closing
-   no elemento #element-overlay.
+   O fluxo é:
+     Abrir: remove .hidden → rAF duplo → adiciona .is-open
+     Fechar: remove .is-open → adiciona .is-closing → setTimeout(260ms) → adiciona .hidden
    
-   Por que separar aqui em vez de colocar no main.css?
-   Porque as regras de animação do overlay e do modal interno
-   dependem da estrutura específica do modal (qual filho anima,
-   qual duração usar), então pertencem ao escopo do modal.css.
-   As definições de @keyframes ficam em main.css porque são
-   reutilizáveis globalmente — essa separação é intencional.
+   O rAF duplo no open() existe porque o browser precisa de
+   ao menos um frame para calcular o layout após remover
+   display:none — sem ele, a animação já começa do estado
+   final e não é percebida pelo usuário.
    ============================================================ */
 
-/* ── Overlay escuro ──────────────────────────────────────────
-   .is-open: aciona o fade-in do fundo escurecido.
-   Sem esta regra, remover .hidden já mostraria o overlay
-   mas sem transição — piscaria instantaneamente.               */
+/* Overlay — entrada */
 .overlay.is-open {
   animation: overlayFadeIn var(--dur-normal) ease both;
 }
 
-/* ── Saída do overlay ────────────────────────────────────────
-   .is-closing: fade reverso. O JS aplica .hidden após 260ms
-   (alinhado com --dur-normal) para só ocultar quando a
-   animação terminar.                                           */
+/* Overlay — saída */
 .overlay.is-closing {
   animation: overlayFadeOut var(--dur-normal) ease both;
 }
@@ -590,20 +659,12 @@
   to   { opacity: 0; }
 }
 
-/* ── Modal interno — entrada ─────────────────────────────────
-   O seletor é específico: só anima quando o OVERLAY tem
-   .is-open, não o modal diretamente. Isso garante que a
-   animação dispara no momento certo, junto com o overlay.
-   
-   scale(0.96) → scale(1): a caixa parece "expandir" do ponto
-   de clique, que é mais físico do que descer do topo.         */
+/* Modal interno — entrada com spring físico */
 .overlay.is-open .modal {
   animation: modalEnter var(--dur-normal) var(--ease-out-back) both;
 }
 
-/* ── Modal interno — saída ───────────────────────────────────
-   Escala para baixo de 1 → 0.96 enquanto some.
-   Duração idêntica ao overlay para sincronizar.               */
+/* Modal interno — saída (colapsa de volta ao ponto de origem) */
 .overlay.is-closing .modal {
   animation: modalLeave var(--dur-normal) ease both;
 }
@@ -617,12 +678,4 @@
     opacity: 0;
     transform: scale(0.96) translateY(6px);
   }
-}
-
-/* ── Feedback de verificação de nome ─────────────────────────
-   A classe .feedback-animated é adicionada/removida pelo JS
-   em _setFeedback() para reiniciar a animação a cada nova
-   mensagem. O fadeSlideUp está definido em main.css.          */
-.feedback-msg.feedback-animated {
-  animation: fadeSlideUp var(--dur-normal) var(--ease-out-circ) both;
 }
