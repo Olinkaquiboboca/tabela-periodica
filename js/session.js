@@ -3,8 +3,8 @@
 //
 // REGRAS DE SEGURANÇA DESTE MÓDULO:
 // 1. Nunca armazenar o ip_hash ou qualquer dado sensível.
-// 2. Nunca enviar o IP no body da requisição — a Edge Function
-//    lê direto do header HTTP da requisição.
+// 2. O device_id é gerado no cliente e salvo no localStorage —
+//    identifica o dispositivo/browser sem depender de IP externo.
 // 3. O student_name canônico vem do servidor, não do input.
 // 4. Todas as operações críticas são delegadas às Edge Functions.
 // ============================================================
@@ -15,7 +15,32 @@ const Session = (() => {
   let _sessionCode = null;
   let _studentName = null;
   let _confirmed   = false;
-  let _choices     = []; // array de element_numbers desta sessão
+  let _choices     = [];
+
+  // ── Identificação do dispositivo ──────────────────────────
+  // Em vez de depender do IP externo do roteador (que é o mesmo
+  // para todos os dispositivos na mesma rede WiFi), geramos um
+  // UUID único por dispositivo/browser e persistimos no localStorage.
+  //
+  // Na primeira visita: crypto.randomUUID() cria um UUID v4 e
+  // o salva em "tp_device_id" no localStorage deste domínio.
+  // Nas visitas seguintes: o mesmo UUID é recuperado — a sessão
+  // do aluno é restaurada corretamente mesmo após recarregar.
+  //
+  // Limitação conhecida: modo anônimo cria um localStorage
+  // temporário que some ao fechar o browser. Na prática,
+  // para uso escolar em browser normal, isso não é problema.
+  function _getOrCreateDeviceId() {
+    const KEY = "tp_device_id";
+    let id = localStorage.getItem(KEY);
+    if (!id) {
+      // crypto.randomUUID() é nativo em todos os browsers modernos
+      // (Chrome 92+, Firefox 95+, Safari 15.4+) — sem dependência.
+      id = crypto.randomUUID();
+      localStorage.setItem(KEY, id);
+    }
+    return id;
+  }
 
   // ── Inicialização ─────────────────────────────────────────
   async function init() {
@@ -26,7 +51,11 @@ const Session = (() => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({}),
+        // device_id enviado no body — a Edge Function usa ele
+        // para identificar o dispositivo em vez do IP externo.
+        body: JSON.stringify({
+          device_id: _getOrCreateDeviceId(),
+        }),
       });
 
       if (!res.ok) {
@@ -209,18 +238,8 @@ const Session = (() => {
   // ── Callback ao completar as 4 escolhas ───────────────────
   function _onCompleted() {
     if (typeof confetti === "function") {
-      // ── Estratégia de confetti localizado ─────────────────
-      // Em vez de cair do topo da tela inteira (origin y:0),
-      // calculamos a posição real do contador na barra para
-      // que o burst parta de onde o aluno acabou de ver o
-      // quarto pip acender. Isso conecta visualmente o efeito
-      // à ação que o causou.
-      //
-      // getBoundingClientRect() retorna coordenadas em px
-      // relativas ao viewport. confetti() espera valores
-      // normalizados 0–1 (x: 0=esquerda, 1=direita; y: idem).
       const counter = document.getElementById("choice-counter");
-      const origin  = { x: 0.85, y: 0.04 }; // fallback: canto superior direito
+      const origin  = { x: 0.85, y: 0.04 };
 
       if (counter) {
         const rect = counter.getBoundingClientRect();
@@ -228,12 +247,8 @@ const Session = (() => {
         origin.y = (rect.top  + rect.height / 2) / window.innerHeight;
       }
 
-      // Paleta alinhada com as variáveis CSS do tema —
-      // as mesmas cores das categorias de elementos.
       const palette = ["#ffd43b", "#4dabf7", "#da77f2", "#63e6be", "#ffa94d"];
 
-      // Primeiro burst: saída rápida e concentrada —
-      // simula uma "explosão" saindo do ponto de origem.
       confetti({
         particleCount: 60,
         spread:        50,
@@ -244,10 +259,6 @@ const Session = (() => {
         ticks:         200,
       });
 
-      // Segundo burst com delay: partículas mais lentas e
-      // espalhadas que "flutuam" depois do impacto inicial.
-      // O resultado é um efeito de dois tempos — rápido + suave —
-      // que parece orgânico em vez de programado.
       setTimeout(() => {
         confetti({
           particleCount: 40,
@@ -257,7 +268,7 @@ const Session = (() => {
           origin,
           colors:        palette,
           ticks:         250,
-          scalar:        0.9, // partículas um pouco menores no segundo burst
+          scalar:        0.9,
         });
       }, 180);
     }
