@@ -1,12 +1,16 @@
 // ============================================================
 // app.js — Orquestrador principal
 //
-// Inicializa todos os módulos na ordem correta e gerencia
-// a lógica do modal de conclusão.
+// CORREÇÕES APLICADAS:
+// 1. [BUG confirmed=false] Após gerar o PDF com sucesso, agora
+//    fazemos UPDATE sessions SET confirmed=true no Supabase.
+//    Isso impede que outra pessoa sobrescreva a sessão com
+//    outro nome, já que choose-element bloqueia sessões confirmadas.
 //
-// ANIMAÇÕES: o modal de conclusão segue o mesmo padrão do
-// modal de elemento — .is-open / .is-closing gerenciam as
-// transições CSS sem precisar de biblioteca externa.
+// 2. [BUG mobile] A barra inferior de mobile (#mobile-action-bar)
+//    é sincronizada com o estado do botão #btn-conclude aqui,
+//    via _syncMobileBar(). O HTML e CSS correspondentes foram
+//    adicionados em index.html e main.css.
 // ============================================================
 
 // ── Inicialização principal ───────────────────────────────────
@@ -30,8 +34,6 @@ async function initApp() {
     initConcludeModal();
 
     // 6. Remove o loading overlay com a transição CSS já definida
-    //    (.hidden no main.css usa opacity:0 + pointer-events:none,
-    //    não display:none — então a transição de 0.55s funciona)
     if (loadingOverlay) {
       loadingOverlay.classList.add("hidden");
     }
@@ -45,7 +47,7 @@ async function initApp() {
       const loadingText = loadingOverlay.querySelector(".loading-text");
       if (loadingText) {
         loadingText.textContent = "Erro ao conectar. Verifique sua conexão e recarregue a página.";
-        loadingText.style.color = "var(--danger)"; // usa variável CSS em vez de valor hardcoded
+        loadingText.style.color = "var(--danger)";
       }
       const fill = loadingOverlay.querySelector(".loading-fill");
       if (fill) fill.style.animation = "none";
@@ -53,9 +55,32 @@ async function initApp() {
   }
 }
 
+// ── Sincroniza a barra mobile com o estado do botão principal ─
+// O botão #btn-conclude na floating-bar some no mobile (tela estreita).
+// A barra #mobile-action-bar fica fixa na parte inferior e espelha
+// o estado de disabled — ativada quando o aluno escolhe 4 elementos.
+//
+// Esta função é chamada pelo session.js via _updateCounter() toda vez
+// que uma escolha é feita. Para isso funcionar, exportamos _syncMobileBar
+// como window._syncMobileBar e chamamos de session.js.
+// Alternativa mais limpa: um MutationObserver no #btn-conclude.
+function _syncMobileBar() {
+  const mainBtn   = document.getElementById("btn-conclude");
+  const mobileBtn = document.getElementById("btn-conclude-mobile");
+  if (!mobileBtn || !mainBtn) return;
+
+  // Espelha o estado disabled do botão principal
+  mobileBtn.disabled = mainBtn.disabled;
+  mobileBtn.setAttribute("aria-disabled", mainBtn.disabled ? "true" : "false");
+}
+
+// Expõe para que session.js possa chamar após _updateCounter()
+window._syncMobileBar = _syncMobileBar;
+
 // ── Modal de Conclusão ────────────────────────────────────────
 function initConcludeModal() {
   const btnConclude          = document.getElementById("btn-conclude");
+  const btnConcludeMobile    = document.getElementById("btn-conclude-mobile"); // NOVO: botão mobile
   const concludeOverlay      = document.getElementById("conclude-overlay");
   const concludeClose        = document.getElementById("conclude-close");
   const btnConfirmYes        = document.getElementById("btn-confirm-yes");
@@ -63,9 +88,6 @@ function initConcludeModal() {
   const concludeElementsList = document.getElementById("conclude-elements-list");
   const concludeStudentName  = document.getElementById("conclude-student-name");
 
-  // Guarda o timeout da animação de saída — igual ao padrão do modal.js.
-  // Sem isso, abrir rapidamente após fechar pode re-aplicar .hidden
-  // no meio da animação de abertura.
   let _closeAnimTimeout = null;
 
   // ── Abertura animada ────────────────────────────────────────
@@ -85,14 +107,9 @@ function initConcludeModal() {
         : "";
     }
 
-    // Garante que começa na tela de confirmação, não na de PDF
     document.getElementById("conclude-confirm-area")?.classList.remove("hidden");
     document.getElementById("pdf-download-area")?.classList.add("hidden");
 
-    // Mesma técnica do modal.js:
-    // remove .hidden primeiro (coloca no DOM/fluxo visual),
-    // depois no próximo frame adiciona .is-open para disparar o @keyframe.
-    // O rAF duplo garante que o browser calculou o layout antes de animar.
     concludeOverlay.classList.remove("hidden");
     concludeOverlay.classList.remove("is-closing");
     concludeOverlay.setAttribute("aria-hidden", "false");
@@ -109,8 +126,6 @@ function initConcludeModal() {
     concludeOverlay.classList.remove("is-open");
     concludeOverlay.classList.add("is-closing");
 
-    // Aplica .hidden somente após a animação de saída terminar.
-    // 260ms = var(--dur-normal), alinhado com o CSS do modal.
     _closeAnimTimeout = setTimeout(() => {
       concludeOverlay.classList.add("hidden");
       concludeOverlay.classList.remove("is-closing");
@@ -121,6 +136,10 @@ function initConcludeModal() {
 
   // ── Event listeners ─────────────────────────────────────────
   btnConclude?.addEventListener("click", openConcludeModal);
+
+  // NOVO: botão mobile também abre o mesmo modal de conclusão
+  btnConcludeMobile?.addEventListener("click", openConcludeModal);
+
   concludeClose?.addEventListener("click", closeConcludeModal);
   btnConfirmNo?.addEventListener("click", closeConcludeModal);
 
@@ -135,6 +154,35 @@ function initConcludeModal() {
   });
 
   // ── Confirmação final + geração de PDF ─────────────────────
+  //
+  // CORREÇÃO DO BUG confirmed=false:
+  // O fluxo original chamava generatePDF() e exibia o resultado,
+  // mas nunca atualizava a coluna `confirmed` no banco de dados.
+  // Isso permitia que qualquer pessoa com outra aba aberta ainda
+  // pudesse inserir o nome de outra pessoa na mesma sessão.
+  //
+  // A Edge Function choose-element já tem a validação:
+  //   if (session.confirmed) → retorna 403
+  // Mas ela nunca era acionada porque nada fazia o UPDATE.
+  //
+  // A correção: após o PDF ser gerado com sucesso, fazemos:
+  //   UPDATE sessions SET confirmed = true WHERE id = session_id
+  // via o cliente Supabase direto (operação simples de UPDATE
+  // que não requer Edge Function nova, pois usa o session_id
+  // que já está no cliente após Session.init()).
+  //
+  // Nota de segurança: o RLS da tabela sessions não permite
+  // UPDATE para anon por padrão. Você precisa adicionar esta
+  // policy no Supabase:
+  //
+  //   CREATE POLICY "sessions_confirm_own"
+  //     ON sessions FOR UPDATE
+  //     USING (true)
+  //     WITH CHECK (confirmed = true);
+  //
+  // Ou, alternativamente, criar uma Edge Function confirm-session
+  // que receba o session_id e faça o UPDATE com service_role.
+  // Veja o arquivo confirm-session/index.ts fornecido junto.
   btnConfirmYes?.addEventListener("click", async () => {
     if (Session.choicesCount < 4) return;
 
@@ -142,19 +190,47 @@ function initConcludeModal() {
     btnConfirmYes.textContent = "Gerando PDF…";
 
     try {
+      // Passo 1: gera o PDF (igual ao original)
       await generatePDF(
         Session.choices,
         Session.studentName ?? "Aluno",
         Session.sessionCode ?? "---"
       );
 
-      // ── Confetti localizado no modal de conclusão ───────────
-      // Calculamos a posição do botão "Confirmar" para que o burst
-      // parta de onde o aluno acabou de clicar — conecta o efeito
-      // à ação que o causou, em vez de cair do céu genericamente.
-      //
-      // Se o botão não for encontrado (improvável mas defensivo),
-      // usa o centro horizontal + terço superior como fallback.
+      // Passo 2 (NOVO): marca a sessão como confirmada no banco.
+      // Isso deve acontecer DEPOIS do PDF ser gerado com sucesso
+      // para evitar o estado onde a sessão está "confirmada" mas
+      // o aluno ainda não baixou o arquivo.
+      try {
+        const confirmRes = await fetch(
+          `${CONFIG.EDGE_FUNCTIONS_URL}/confirm-session`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({ session_id: Session.sessionId }),
+          }
+        );
+
+        const confirmData = await confirmRes.json();
+
+        if (!confirmData.success) {
+          // Logar o erro, mas não bloquear o aluno — o PDF já foi gerado.
+          // O pior caso é a sessão não ser marcada como confirmada,
+          // que é o estado original (o bug). Não vamos punir o aluno por isso.
+          console.warn("[app.js] Aviso: não foi possível confirmar sessão no banco:", confirmData.error);
+        } else {
+          console.info("[app.js] Sessão confirmada com sucesso no banco de dados.");
+        }
+      } catch (confirmErr) {
+        // Erro de rede na confirmação: logar silenciosamente.
+        // O PDF já foi gerado — não mostrar erro ao aluno.
+        console.warn("[app.js] Erro de rede ao confirmar sessão:", confirmErr);
+      }
+
+      // Passo 3: dispara o confetti (igual ao original)
       if (typeof confetti === "function") {
         const btnRect = btnConfirmYes.getBoundingClientRect();
         const origin  = {
@@ -162,19 +238,16 @@ function initConcludeModal() {
           y: (btnRect.top  + btnRect.height / 2) / window.innerHeight,
         };
 
-        // Paleta completa — celebração maior que a adoção individual,
-        // então usamos mais cores (todas as categorias representadas)
         const palette = [
-          "#ffd43b", // âmbar — cor de adoção
-          "#4dabf7", // azul acento
-          "#da77f2", // lantanídeo
-          "#63e6be", // pós-transição
-          "#ffa94d", // alcalino terroso
-          "#ff6b6b", // álcali
-          "#51cf66", // sucesso
+          "#ffd43b",
+          "#4dabf7",
+          "#da77f2",
+          "#63e6be",
+          "#ffa94d",
+          "#ff6b6b",
+          "#51cf66",
         ];
 
-        // Primeiro burst: concentrado e rápido — o "impacto"
         confetti({
           particleCount: 80,
           spread:        60,
@@ -185,8 +258,6 @@ function initConcludeModal() {
           ticks:   260,
         });
 
-        // Segundo burst (180ms depois): mais lento e espalhado — o "eco"
-        // Usa scalar menor para partículas menores, diferenciando visualmente
         setTimeout(() => {
           confetti({
             particleCount: 55,
@@ -200,9 +271,6 @@ function initConcludeModal() {
           });
         }, 180);
 
-        // Terceiro burst (400ms depois): pouquíssimas partículas grandes
-        // que "flutuam" para cima — dá a impressão de que o efeito
-        // ainda está acontecendo, cria duração sem ser excessivo
         setTimeout(() => {
           confetti({
             particleCount: 20,
@@ -213,7 +281,7 @@ function initConcludeModal() {
             colors:  palette,
             ticks:   400,
             scalar:  1.2,
-            gravity: 0.4, // partículas sobem mais devagar — efeito de "flutuar"
+            gravity: 0.4,
           });
         }, 400);
       }
@@ -223,14 +291,12 @@ function initConcludeModal() {
       btnConfirmYes.disabled    = false;
       btnConfirmYes.textContent = "Tentar novamente";
 
-      // Erro inline — aparece dentro do modal sem fechar
       const confirmArea   = document.getElementById("conclude-confirm-area");
       const existingError = confirmArea?.querySelector(".pdf-error");
 
       if (!existingError && confirmArea) {
         const errMsg       = document.createElement("p");
         errMsg.className   = "pdf-error";
-        // Usa variáveis CSS em vez de valores hardcoded — respeita o tema
         errMsg.style.cssText = `
           color: var(--danger);
           font-size: 13px;
@@ -258,16 +324,7 @@ function _populateConcludeList(container) {
 
     const card = document.createElement("div");
     card.className = "conclude-element-card";
-
-    // Cor da categoria via CSS custom property — o CSS do modal
-    // usa --card-color para a linha colorida no topo do card
-    // e para o símbolo em cor da categoria
     card.style.setProperty("--card-color", `var(--cat-${el.category})`);
-
-    // Delay de entrada escalonado: cada card aparece 60ms após o anterior.
-    // O @keyframe fadeSlideUp já está no modal.css.
-    // Sem este delay, todos os 4 cards aparecem simultaneamente
-    // e o efeito de entrada fica plano.
     card.style.animationDelay = `${idx * 60}ms`;
 
     card.innerHTML = `
@@ -279,8 +336,6 @@ function _populateConcludeList(container) {
     container.appendChild(card);
   });
 
-  // Slots vazios (não deveria acontecer com choicesCount >= 4,
-  // mas garante que o grid de 2×2 sempre se forma corretamente)
   const remaining = 4 - choices.length;
   for (let i = 0; i < remaining; i++) {
     const empty = document.createElement("div");
@@ -296,10 +351,8 @@ function _populateConcludeList(container) {
 }
 
 // ── Arranque ──────────────────────────────────────────────────
-// Aguarda o DOM antes de inicializar — garante que todos os
-// elementos HTML já existem quando os módulos tentam referenciá-los.
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initApp);
 } else {
-  initApp(); // DOM já estava pronto (script carregado de forma assíncrona)
+  initApp();
 }
