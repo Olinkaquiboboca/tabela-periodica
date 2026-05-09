@@ -37,11 +37,54 @@ function renderTable() {
     cell.style.gridRow    = el.row;
     cell.style.gridColumn = el.col;
 
+    // Os textos ficam abaixo da imagem (z-index 1) por padrão.
+    // O CSS em table.css os revela automaticamente via opacity:1
+    // quando a célula recebe a classe chosen-mine ou chosen-other.
+    // O fallback :not(:has(.cell-bg-image)) também os revela
+    // caso a imagem não carregue ou seja removida do DOM.
     cell.innerHTML = `
       <span class="cell-number">${el.number}</span>
       <span class="cell-symbol">${el.symbol}</span>
       <span class="cell-name">${el.name_pt}</span>
     `;
+
+    // ── Injeção da imagem Cloudinary ─────────────────────────
+    // A imagem é criada separadamente e o src é atribuído APÓS
+    // o registro do onload — isso garante que o evento nunca
+    // é perdido, mesmo em conexões muito rápidas onde o browser
+    // poderia completar o carregamento antes de o handler estar
+    // registrado se o src fosse passado direto no innerHTML.
+    //
+    // loading="lazy": o browser só baixa imagens próximas da
+    // viewport, economizando largura de banda no carregamento
+    // inicial. Em telas que mostram a tabela inteira isso ajuda
+    // principalmente nos lantanídeos e actinídeos no rodapé.
+    if (el.cloudinary_url) {
+      const img = document.createElement("img");
+      img.className      = "cell-bg-image";
+      img.alt            = el.name_pt;
+      img.loading        = "lazy";
+      img.draggable      = false;
+
+      // Sobe opacity para 1 somente após o carregamento completo —
+      // evita o flash de imagem quebrada que ocorreria se opacity
+      // começasse em 1. O CSS já define opacity:0 e transition:0.4s.
+      img.onload  = () => { img.style.opacity = "1"; };
+
+      // Em caso de erro (URL inválida, Cloudinary fora do ar etc.),
+      // remove a img do DOM completamente. O seletor CSS
+      // :not(:has(.cell-bg-image)) assume o controle e revela
+      // os textos normalmente — degradação graciosa sem toque de JS.
+      img.onerror = () => { img.remove(); };
+
+      // src depois do onload — ponto crítico explicado acima.
+      img.src = el.cloudinary_url;
+
+      // Insere antes dos spans para que fique no início do DOM
+      // da célula, respeitando a ordem de z-index definida no CSS
+      // (.cell-bg-image tem z-index:2, os spans têm z-index:1).
+      cell.insertBefore(img, cell.firstChild);
+    }
 
     // Eventos
     cell.addEventListener("click",   () => onCellClick(el.number));
@@ -89,6 +132,11 @@ function markElementTaken(elementNumber, isMine = false) {
   const cell = document.querySelector(`.element-cell[data-number="${elementNumber}"]`);
   if (!cell) return;
 
+  // Nenhuma manipulação de imagem necessária aqui —
+  // o CSS em table.css já trata isso via:
+  //   .element-cell.chosen-mine  .cell-bg-image { opacity: 0 }
+  //   .element-cell.chosen-other .cell-bg-image { opacity: 0 }
+  // Adicionar a classe é suficiente para disparar a transição.
   if (isMine) {
     myElements.add(elementNumber);
     cell.classList.add("chosen-mine");
