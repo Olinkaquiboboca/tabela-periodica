@@ -254,7 +254,7 @@ const Session = (() => {
         const wasMobileFilled = pipMobile.classList.contains("filled");
         pipMobile.classList.toggle("filled", shouldFill);
 
-        if (shouldFill && !wasMobileFilled) {Carecalindao
+        if (shouldFill && !wasMobileFilled) {
           pipMobile.classList.add("pop");
           pipMobile.addEventListener("animationend", () => pipMobile.classList.remove("pop"), { once: true });
         }
