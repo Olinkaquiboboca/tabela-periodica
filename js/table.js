@@ -4,7 +4,8 @@
 // Layout IUPAC padrão: 18 colunas, 10 linhas.
 // Os dados de layout são estáticos (não buscados do banco) para
 // evitar requisição extra no carregamento.
-// Os dados de imagem/cloudinary_url vêm do banco sob demanda.
+// Os dados de imagem/cloudinary_url vêm do banco via
+// fetchElementImages() em supabase.js, chamado por initTable().
 // ============================================================
 
 // Lookup rápido por número de elemento
@@ -15,7 +16,11 @@ const takenElements = new Set(); // escolhidos por qualquer aluno
 const myElements    = new Set(); // escolhidos pelo aluno desta sessão
 
 // ── Renderização da tabela ────────────────────────────────────
-function renderTable() {
+// Recebe imageMap: Map<number, cloudinary_url> vindo do banco.
+// Se o mapa estiver vazio (erro de rede), as células renderizam
+// sem imagem e o CSS fallback :not(:has(.cell-bg-image)) exibe
+// os textos normalmente — degradação graciosa.
+function renderTable(imageMap = new Map()) {
   const grid = document.getElementById("periodic-table");
   grid.innerHTML = "";
 
@@ -49,36 +54,36 @@ function renderTable() {
     `;
 
     // ── Injeção da imagem Cloudinary ─────────────────────────
-    // A imagem é criada separadamente e o src é atribuído APÓS
-    // o registro do onload — isso garante que o evento nunca
-    // é perdido, mesmo em conexões muito rápidas onde o browser
-    // poderia completar o carregamento antes de o handler estar
-    // registrado se o src fosse passado direto no innerHTML.
+    // A URL vem do imageMap buscado do banco — o ELEMENTS_LAYOUT
+    // estático não a contém. Se não houver URL para este número
+    // (mapa vazio ou elemento ausente no banco), simplesmente
+    // não injeta a imagem e o CSS fallback assume o controle.
     //
-    // loading="lazy": o browser só baixa imagens próximas da
-    // viewport, economizando largura de banda no carregamento
-    // inicial. Em telas que mostram a tabela inteira isso ajuda
-    // principalmente nos lantanídeos e actinídeos no rodapé.
-    if (el.cloudinary_url) {
-      const img = document.createElement("img");
-      img.className      = "cell-bg-image";
-      img.alt            = el.name_pt;
-      img.loading        = "lazy";
-      img.draggable      = false;
+    // O src é atribuído APÓS o registro do onload — isso garante
+    // que o evento nunca é perdido, mesmo em conexões muito rápidas
+    // onde o browser poderia completar o load antes de o handler
+    // estar registrado se o src fosse passado direto no innerHTML.
+    const cloudinaryUrl = imageMap.get(el.number);
+    if (cloudinaryUrl) {
+      const img       = document.createElement("img");
+      img.className   = "cell-bg-image";
+      img.alt         = el.name_pt;
+      img.loading     = "lazy";
+      img.draggable   = false;
 
-      // Sobe opacity para 1 somente após o carregamento completo —
-      // evita o flash de imagem quebrada que ocorreria se opacity
-      // começasse em 1. O CSS já define opacity:0 e transition:0.4s.
+      // Sobe opacity para 1 somente após carregamento completo —
+      // evita flash de imagem quebrada. O CSS define opacity:0
+      // e transition:0.4s, então a entrada é sempre suave.
       img.onload  = () => { img.style.opacity = "1"; };
 
-      // Em caso de erro (URL inválida, Cloudinary fora do ar etc.),
-      // remove a img do DOM completamente. O seletor CSS
-      // :not(:has(.cell-bg-image)) assume o controle e revela
-      // os textos normalmente — degradação graciosa sem toque de JS.
+      // Em caso de erro (URL inválida, Cloudinary fora do ar),
+      // remove a img do DOM. O seletor :not(:has(.cell-bg-image))
+      // do CSS assume o controle e revela os textos — degradação
+      // graciosa sem nenhum toque adicional de JS.
       img.onerror = () => { img.remove(); };
 
       // src depois do onload — ponto crítico explicado acima.
-      img.src = el.cloudinary_url;
+      img.src = cloudinaryUrl;
 
       // Insere antes dos spans para que fique no início do DOM
       // da célula, respeitando a ordem de z-index definida no CSS
@@ -179,7 +184,11 @@ async function loadInitialState() {
 }
 
 // ── Ponto de entrada ──────────────────────────────────────────
+// Busca as URLs das imagens do banco ANTES de renderizar —
+// assim cada célula já recebe sua imagem na primeira pintura,
+// sem necessidade de atualizar o DOM depois.
 async function initTable() {
-  renderTable();
+  const imageMap = await fetchElementImages();
+  renderTable(imageMap);
   await loadInitialState();
 }
