@@ -5,7 +5,6 @@
 // cliente só pode ler dados permitidos e nunca escrever
 // diretamente nas tabelas críticas (sessions, students).
 // ============================================================
-
 (function () {
   // O SDK do Supabase é carregado via CDN antes deste arquivo.
   // Verifica se o SDK foi carregado corretamente.
@@ -49,3 +48,26 @@
       }
     });
 })();
+
+// ── Busca as URLs das imagens do banco ────────────────────────
+// Retorna um Map de { number → cloudinary_url } para todos os
+// 118 elementos. Chamado por initTable() antes de renderizar,
+// garantindo que as imagens estejam disponíveis no momento
+// em que cada célula é montada no DOM.
+//
+// Em caso de erro (banco fora do ar, CORS etc.), retorna um
+// Map vazio — o fallback :not(:has(.cell-bg-image)) do CSS
+// assume o controle e exibe os textos normalmente.
+async function fetchElementImages() {
+  const { data, error } = await window._supabase
+    .from("elements")
+    .select("number, cloudinary_url");
+
+  if (error) {
+    console.warn("[supabase.js] Não foi possível buscar imagens:", error.message);
+    return new Map();
+  }
+
+  // Constrói o Map para lookup O(1) dentro do renderTable()
+  return new Map(data.map(el => [el.number, el.cloudinary_url]));
+}
