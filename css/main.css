@@ -619,3 +619,175 @@ input:focus-visible {
 .element-cell.shake {
   animation: shake 0.32s ease both;
 }
+
+/* ============================================================
+   BARRA DE AÇÃO MOBILE
+   ============================================================
+   
+   CONTEXTO DO BUG:
+   O botão "Concluir" fica dentro de .bar-right na .floating-bar
+   horizontal. Em telas estreitas (celular), a barra comprime e
+   o botão some ou fica inacessível atrás da borda da tela.
+   
+   SOLUÇÃO:
+   Uma segunda barra fixa na parte INFERIOR da tela, visível
+   apenas em mobile (≤ 600px). Ela espelha o estado do botão
+   principal via _syncMobileBar() em app.js.
+   
+   PADRÃO UX:
+   Ações primárias em barras inferiores é o padrão consolidado
+   de mobile (ex: tab bars no iOS, FAB no Android). O polegar
+   alcança a parte de baixo com muito mais facilidade do que
+   os cantos superiores da tela.
+   
+   COLE ESTE BLOCO NO FINAL do seu main.css existente.
+   ============================================================ */
+
+/* ── Barra de ação inferior — visível APENAS no mobile ──────── */
+.mobile-action-bar {
+  display: none; /* Oculta por padrão em desktop */
+}
+
+/* ── Media query: telas até 600px (celulares) ───────────────── */
+/* 600px foi escolhido porque é onde a floating-bar começa a
+   comprimir demais para caber o contador + código + botão.
+   Ajuste conforme necessário para o seu projeto. */
+@media (max-width: 600px) {
+
+  /* ── Ajuste do body para não esconder conteúdo atrás da barra ─ */
+  /* Sem esse padding-bottom, os últimos elementos da tabela
+     periódica ficam ocultos atrás da barra inferior. */
+  body {
+    padding-bottom: 72px; /* altura da barra (56px) + margem (16px) */
+  }
+
+  /* ── Esconde o botão Concluir da floating-bar no mobile ──────── */
+  /* O botão ainda existe no DOM (para a lógica JS funcionar),
+     mas fica invisível. A barra inferior assume o papel dele. */
+  .floating-bar .conclude-btn {
+    display: none;
+  }
+
+  /* ── Esconde o contador de texto no mobile (economiza espaço) ── */
+  /* Os pips (bolinhas) continuam visíveis — são informativos
+     o suficiente sem o "0/4 elementos" ao lado. */
+  .floating-bar .counter-label {
+    display: none;
+  }
+
+  /* ── Ativa e estiliza a barra inferior ──────────────────────── */
+  .mobile-action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    /* Fixa na parte inferior da tela, acima de tudo */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+
+    /* Mesma linguagem visual da floating-bar */
+    background: var(--bg-glass);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(16px) saturate(1.5);
+    -webkit-backdrop-filter: blur(16px) saturate(1.5);
+
+    padding: 10px 16px;
+    /* padding-bottom extra garante que a barra não fica atrás
+       da barra de navegação do sistema (safe-area no iOS) */
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  /* ── Texto de status à esquerda da barra ─────────────────── */
+  .mobile-bar-status {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0; /* permite truncar texto se necessário */
+  }
+
+  .mobile-bar-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+
+  .mobile-bar-name {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Pips na barra mobile ────────────────────────────────── */
+  /* Repetição dos pips da floating-bar, para que o aluno
+     veja o progresso sem precisar rolar para o topo. */
+  .mobile-bar-pips {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    flex: 0 0 auto;
+  }
+
+  /* ── Botão Concluir na barra mobile ──────────────────────── */
+  /* Maior que o botão do desktop — área de toque adequada
+     (mínimo recomendado: 44×44px segundo WCAG). */
+  .conclude-btn-mobile {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius);
+    padding: 10px 20px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    flex: 0 0 auto;
+    min-height: 44px; /* área de toque mínima WCAG */
+    transition:
+      background var(--dur-normal) ease,
+      transform var(--dur-fast) ease,
+      opacity var(--dur-normal) ease;
+    letter-spacing: 0.2px;
+  }
+
+  .conclude-btn-mobile:not(:disabled):active {
+    transform: scale(0.96);
+    transition-duration: var(--dur-fast);
+  }
+
+  .conclude-btn-mobile:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* ── Animação de entrada da barra ────────────────────────── */
+  /* Sobe do fundo quando o DOM carrega — consistente com
+     a floating-bar que desce do topo. */
+  .mobile-action-bar {
+    animation: fadeSlideFromBottom var(--dur-slow) var(--ease-out-circ) both;
+  }
+
+  @keyframes fadeSlideFromBottom {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
