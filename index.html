@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tabela Periódica — Turma</title>
 
-  <!-- ai d
-    SEGURANÇA: Content Security Policy via meta tag.
-    GitHub Pages não suporta headers HTTP customizados.
-    AJUSTE as URLs para os seus projetos reais antes do deploy.
-  -->
   <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
   script-src 'self' https://cdn.jsdelivr.net https://unpkg.com;
@@ -37,7 +32,7 @@
 </head>
 <body>
 
-  <!-- BARRA FLUTUANTE -->
+  <!-- BARRA FLUTUANTE (topo) -->
   <header id="floating-bar" class="floating-bar" aria-label="Barra de status">
     <div class="bar-brand">
       <span class="bar-title">Tabela Periódica</span>
@@ -91,7 +86,6 @@
       <!-- Células geradas dinamicamente pelo JS -->
     </div>
 
-    <!-- Indicador da série dos lantanídeos/actinídeos -->
     <div class="series-labels" aria-hidden="true">
       <div class="series-label" style="grid-row:9;grid-column:1/3">
         <span>57–71</span>
@@ -224,6 +218,46 @@
       <div class="loading-bar"><div class="loading-fill"></div></div>
       <p class="loading-text">Inicializando sessão…</p>
     </div>
+  </div>
+
+  <!-- ============================================================
+       BARRA DE AÇÃO MOBILE (visível apenas em telas ≤ 600px)
+       ============================================================
+       Esta barra fica fixada na parte inferior da tela no celular.
+       O botão "Concluir" da barra do topo some no mobile (via CSS),
+       e este aqui assume o papel dele com área de toque maior.
+       Os pips duplicados (pip-mobile-1..4) são sincronizados
+       junto com os originais dentro de _updateCounter() no session.js.
+  ============================================================ -->
+  <div class="mobile-action-bar" aria-label="Ações do aluno">
+
+    <!-- Lado esquerdo: nome do aluno verificado -->
+    <div class="mobile-bar-status">
+      <span class="mobile-bar-label">ALUNO</span>
+      <!-- Preenchido pelo JS quando o nome é verificado -->
+      <span class="mobile-bar-name" id="mobile-student-name">—</span>
+    </div>
+
+    <!-- Centro: pips de progresso duplicados para visibilidade -->
+    <div class="mobile-bar-pips" aria-hidden="true">
+      <span class="pip" id="pip-mobile-1"></span>
+      <span class="pip" id="pip-mobile-2"></span>
+      <span class="pip" id="pip-mobile-3"></span>
+      <span class="pip" id="pip-mobile-4"></span>
+    </div>
+
+    <!-- Lado direito: botão Concluir com área de toque adequada -->
+    <button
+      id="btn-conclude-mobile"
+      class="conclude-btn-mobile"
+      disabled
+      aria-disabled="true"
+      aria-label="Concluir seleção de elementos"
+    >
+      <span>✓</span>
+      Concluir
+    </button>
+
   </div>
 
   <!-- CDNs -->
