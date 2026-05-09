@@ -1,10 +1,24 @@
 // ============================================================
 // session.js — Gerenciamento de sessão do aluno
 //
-// REGRAS DE SEGURANÇA DESTE MÓDULO:
+// CORREÇÕES APLICADAS NESTA VERSÃO:
+//
+// 1. _updateCounter() agora sincroniza os pips da barra mobile
+//    (pip-mobile-1..4) junto com os da floating-bar (pip-1..4).
+//
+// 2. _updateCounter() atualiza o nome do aluno na barra mobile
+//    (#mobile-student-name) assim que disponível.
+//
+// 3. _updateCounter() chama window._syncMobileBar() ao final,
+//    função definida em app.js que espelha o estado disabled
+//    do botão Concluir no botão mobile.
+//
+// 4. verifyName() atualiza o nome na barra mobile imediatamente
+//    após verificação, sem precisar esperar a primeira escolha.
+//
+// REGRAS DE SEGURANÇA DESTE MÓDULO (mantidas do original):
 // 1. Nunca armazenar o ip_hash ou qualquer dado sensível.
-// 2. O device_id é gerado no cliente e salvo no localStorage —
-//    identifica o dispositivo/browser sem depender de IP externo.
+// 2. O device_id é gerado no cliente e salvo no localStorage.
 // 3. O student_name canônico vem do servidor, não do input.
 // 4. Todas as operações críticas são delegadas às Edge Functions.
 // ============================================================
@@ -18,24 +32,10 @@ const Session = (() => {
   let _choices     = [];
 
   // ── Identificação do dispositivo ──────────────────────────
-  // Em vez de depender do IP externo do roteador (que é o mesmo
-  // para todos os dispositivos na mesma rede WiFi), geramos um
-  // UUID único por dispositivo/browser e persistimos no localStorage.
-  //
-  // Na primeira visita: crypto.randomUUID() cria um UUID v4 e
-  // o salva em "tp_device_id" no localStorage deste domínio.
-  // Nas visitas seguintes: o mesmo UUID é recuperado — a sessão
-  // do aluno é restaurada corretamente mesmo após recarregar.
-  //
-  // Limitação conhecida: modo anônimo cria um localStorage
-  // temporário que some ao fechar o browser. Na prática,
-  // para uso escolar em browser normal, isso não é problema.
   function _getOrCreateDeviceId() {
     const KEY = "tp_device_id";
     let id = localStorage.getItem(KEY);
     if (!id) {
-      // crypto.randomUUID() é nativo em todos os browsers modernos
-      // (Chrome 92+, Firefox 95+, Safari 15.4+) — sem dependência.
       id = crypto.randomUUID();
       localStorage.setItem(KEY, id);
     }
@@ -51,8 +51,6 @@ const Session = (() => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
         },
-        // device_id enviado no body — a Edge Function usa ele
-        // para identificar o dispositivo em vez do IP externo.
         body: JSON.stringify({
           device_id: _getOrCreateDeviceId(),
         }),
@@ -88,6 +86,12 @@ const Session = (() => {
           verifyBtn.classList.add("verified");
           verifyBtn.disabled = true;
         }
+
+        // Preenche o nome na barra mobile logo na inicialização,
+        // caso o aluno já tenha verificado o nome em uma sessão anterior
+        // (o nome é restaurado do banco via create-session).
+        const mobileNameEl = document.getElementById("mobile-student-name");
+        if (mobileNameEl) mobileNameEl.textContent = _studentName;
       }
 
       await _loadExistingChoices();
@@ -155,6 +159,13 @@ const Session = (() => {
           verifyBtn.classList.add("verified");
           verifyBtn.disabled = true;
         }
+
+        // CORREÇÃO MOBILE: atualiza o nome na barra inferior
+        // imediatamente após a verificação, sem esperar a primeira escolha.
+        // Sem isso, o aluno verifica o nome mas a barra mobile ainda
+        // mostra "—" até ele escolher algum elemento.
+        const mobileNameEl = document.getElementById("mobile-student-name");
+        if (mobileNameEl) mobileNameEl.textContent = _studentName;
       }
 
       return data;
@@ -207,6 +218,12 @@ const Session = (() => {
   }
 
   // ── Atualização do contador na UI ─────────────────────────
+  //
+  // CORREÇÃO MOBILE: além dos pips originais (pip-1..4) e do
+  // botão da floating-bar, agora também sincroniza:
+  //   - pip-mobile-1..4 (pips duplicados na barra inferior)
+  //   - #mobile-student-name (nome do aluno na barra inferior)
+  //   - window._syncMobileBar() (espelha o disabled no botão mobile)
   function _updateCounter() {
     const n = _choices.length;
 
@@ -214,24 +231,57 @@ const Session = (() => {
     if (countEl) countEl.textContent = n;
 
     for (let i = 1; i <= 4; i++) {
-      const pip = document.getElementById(`pip-${i}`);
-      if (!pip) continue;
-
-      const wasFilled = pip.classList.contains("filled");
+      const pip       = document.getElementById(`pip-${i}`);
+      const pipMobile = document.getElementById(`pip-mobile-${i}`);
       const shouldFill = i <= n;
 
-      pip.classList.toggle("filled", shouldFill);
+      // ── Pip da floating-bar (original) ─────────────────
+      if (pip) {
+        const wasFilled = pip.classList.contains("filled");
+        pip.classList.toggle("filled", shouldFill);
 
-      if (shouldFill && !wasFilled) {
-        pip.classList.add("pop");
-        pip.addEventListener("animationend", () => pip.classList.remove("pop"), { once: true });
+        if (shouldFill && !wasFilled) {
+          pip.classList.add("pop");
+          pip.addEventListener("animationend", () => pip.classList.remove("pop"), { once: true });
+        }
+      }
+
+      // ── Pip da barra mobile (novo) ──────────────────────
+      // A mesma animação "pop" dispara no mobile para que o aluno
+      // veja o feedback independentemente de estar olhando
+      // para o topo ou para o fundo da tela.
+      if (pipMobile) {
+        const wasMobileFilled = pipMobile.classList.contains("filled");
+        pipMobile.classList.toggle("filled", shouldFill);
+
+        if (shouldFill && !wasMobileFilled) {Carecalindao
+          pipMobile.classList.add("pop");
+          pipMobile.addEventListener("animationend", () => pipMobile.classList.remove("pop"), { once: true });
+        }
       }
     }
 
+    // Botão Concluir da floating-bar (original)
     const btnConclude = document.getElementById("btn-conclude");
     if (btnConclude) {
       btnConclude.disabled = n < 4;
       btnConclude.setAttribute("aria-disabled", n < 4 ? "true" : "false");
+    }
+
+    // Atualiza o nome na barra mobile se já estiver disponível.
+    // Isso cobre o caso de _loadExistingChoices() ser chamada
+    // na inicialização quando o aluno já tinha um nome verificado
+    // em sessão anterior — o nome chega antes da primeira escolha.
+    const mobileNameEl = document.getElementById("mobile-student-name");
+    if (mobileNameEl && _studentName) {
+      mobileNameEl.textContent = _studentName;
+    }
+
+    // Espelha o estado disabled no botão mobile.
+    // _syncMobileBar é definida em app.js e exposta via window
+    // para evitar dependência circular entre módulos.
+    if (typeof window._syncMobileBar === "function") {
+      window._syncMobileBar();
     }
   }
 
