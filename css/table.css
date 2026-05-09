@@ -60,39 +60,26 @@
   background: var(--bg-card);
   user-select: none;
 
-  /* Transição física — spring para o hover, ease para o resto */
   transition:
     transform     var(--dur-fast) var(--ease-spring),
     background    var(--dur-normal) ease,
     border-color  var(--dur-normal) ease,
     box-shadow    var(--dur-fast) ease;
 
-  /* ── Animação de entrada escalonada ──────────────────────
-     O @keyframe cellEntrance está definido em main.css.
-     O JS em table.js define animation-delay por índice:
-       cell.style.animationDelay = `${Math.min(idx * 4, 300)}ms`
-     Isso cria uma onda que varre a tabela da esquerda p/ direita.
-     
-     "both" é crucial: mantém o estado inicial (opacity:0, scale:0.88)
-     ANTES da animação começar, evitando flash de elementos visíveis
-     que depois desaparecem para animar. ──────────────────────── */
   animation: cellEntrance var(--dur-normal) var(--ease-out-back) both;
 }
 
-/* ── Hover — física de escala ────────────────────────────────
-   scale(1.18) com spring cria a sensação de que a célula
-   "salta" ao ser tocada — tem inércia, não é linear.
-   z-index sobe para a célula ficar na frente das vizinhas. */
 .element-cell:hover {
   transform: scale(1.18);
   z-index: 10;
-  /* Sombra sutil — indica elevação, não neon */
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
-/* Gradiente de brilho direcional no hover —
-   simula fonte de luz vindo do canto superior esquerdo.
-   Não é neon, é direcionamento de luz. */
+/* ::after é o overlay multipropósito da célula.
+   No estado base funciona como brilho direcional no hover.
+   Nos estados chosen-mine e chosen-other vira a máscara
+   colorida que cobre a imagem — por isso z-index:5, acima
+   da imagem (z-index:2) mas abaixo dos ícones ::before (z-index:6). */
 .element-cell::after {
   content: '';
   position: absolute;
@@ -105,7 +92,6 @@
   pointer-events: none;
   opacity: 0;
   transition: opacity var(--dur-fast) ease;
-  /* z-index 5: acima de tudo, incluindo a imagem Cloudinary */
   z-index: 5;
 }
 .element-cell:hover::after {
@@ -114,11 +100,6 @@
 
 /* ============================================================
    CORES POR CATEGORIA
-
-   Cada categoria define:
-   - --cell-color: usado pelo símbolo e hover de borda
-   - background: 12% da cor da categoria misturada ao --bg-card
-   - border-color: 35% da cor — visível mas não gritante
    ============================================================ */
 .cat-alcali              { --cell-color: var(--cat-alcali);              background: color-mix(in srgb, var(--cat-alcali)              12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-alcali)              35%, transparent); }
 .cat-alcalino-terroso    { --cell-color: var(--cat-alcalino-terroso);    background: color-mix(in srgb, var(--cat-alcalino-terroso)    12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-alcalino-terroso)    35%, transparent); }
@@ -131,9 +112,6 @@
 .cat-halogenio           { --cell-color: var(--cat-halogenio);           background: color-mix(in srgb, var(--cat-halogenio)           12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-halogenio)           35%, transparent); }
 .cat-gas-nobre           { --cell-color: var(--cat-gas-nobre);           background: color-mix(in srgb, var(--cat-gas-nobre)           12%, var(--bg-card)); border-color: color-mix(in srgb, var(--cat-gas-nobre)           35%, transparent); }
 
-/* Hover: intensifica o background de 12% para 28% —
-   sutil o suficiente para não parecer highlight de seleção,
-   forte o suficiente para dar feedback visual claro. */
 .element-cell:hover.cat-alcali              { background: color-mix(in srgb, var(--cat-alcali)              28%, var(--bg-card)); }
 .element-cell:hover.cat-alcalino-terroso    { background: color-mix(in srgb, var(--cat-alcalino-terroso)    28%, var(--bg-card)); }
 .element-cell:hover.cat-lantanideo          { background: color-mix(in srgb, var(--cat-lantanideo)          28%, var(--bg-card)); }
@@ -149,13 +127,11 @@
    IMAGEM DE FUNDO DA CÉLULA (Cloudinary)
 
    z-index 2: fica ACIMA dos textos (z-index 1) por padrão,
-   cobrindo-os enquanto a imagem está visível.
-   
-   Começa com opacity:0 — o JS a sobe para 1 somente após
-   o onload, evitando flash de imagem quebrada.
-   
-   Quando o elemento é escolhido (chosen-mine / chosen-other),
-   a imagem some e os textos ficam visíveis novamente.
+   cobrindo-os enquanto a imagem está visível no estado livre.
+
+   Nos estados chosen-mine e chosen-other a imagem PERMANECE
+   visível — o overlay ::after é que sinaliza a seleção.
+   A imagem nunca some; o que muda é a camada sobre ela.
    ============================================================ */
 .cell-bg-image {
   position: absolute;
@@ -170,25 +146,19 @@
   transition: opacity 0.4s ease;
 }
 
-.element-cell.chosen-mine  .cell-bg-image,
-.element-cell.chosen-other .cell-bg-image {
-  opacity: 0;
-  /* transition aqui garante que some suavemente,
-     não pisca — sincroniza com o adoptPulse */
-  transition: opacity var(--dur-normal) ease;
-}
-
 /* ============================================================
    CONTEÚDO DA CÉLULA (número, símbolo, nome)
 
-   z-index 1: ficam ABAIXO da imagem Cloudinary por padrão.
-   opacity 0: invisíveis enquanto a imagem os cobre.
-   
-   Quando a imagem some (estado chosen-*), o seletor abaixo
-   os revela com opacity:1 e z-index:4 (acima da imagem).
-   
+   No estado livre ficam invisíveis (opacity:0) porque a imagem
+   os cobre (z-index:2 > z-index:1).
+
+   Nos estados chosen-* sobem para z-index:6 — acima da imagem
+   (z-index:2) E acima do overlay ::after (z-index:5) — e ficam
+   legíveis graças ao text-shadow escuro que cria contraste
+   com qualquer cor de imagem abaixo.
+
    O fallback :not(:has(.cell-bg-image)) cobre o caso onde
-   a imagem não carregou — o texto fica visível normalmente.
+   a imagem não carregou — textos ficam visíveis normalmente.
    ============================================================ */
 .cell-number {
   display: block;
@@ -211,7 +181,6 @@
   text-align: center;
   margin: 1px 0;
   color: var(--cell-color, var(--text));
-  /* text-shadow muito sutil — só o suficiente para legibilidade */
   text-shadow: 0 0 10px color-mix(in srgb, var(--cell-color, transparent) 40%, transparent);
   position: relative;
   z-index: 1;
@@ -222,7 +191,7 @@
 .cell-name {
   display: block;
   font-size: 6.5px;
-  color: var(--text-secondary); /* usa a nova variável intermediária do main.css */
+  color: var(--text-secondary);
   text-align: center;
   overflow: hidden;
   white-space: nowrap;
@@ -234,7 +203,10 @@
   transition: opacity var(--dur-normal) ease;
 }
 
-/* Revela textos quando o elemento foi escolhido */
+/* Revela textos acima do overlay nos estados chosen-*.
+   z-index:6 garante que ficam acima da imagem (2),
+   do overlay ::after (5) e dos ícones ::before (6 também —
+   mas ::before e os spans não competem por espaço). */
 .element-cell.chosen-mine  .cell-number,
 .element-cell.chosen-mine  .cell-symbol,
 .element-cell.chosen-mine  .cell-name,
@@ -242,7 +214,9 @@
 .element-cell.chosen-other .cell-symbol,
 .element-cell.chosen-other .cell-name {
   opacity: 1;
-  z-index: 4;
+  z-index: 6;
+  /* text-shadow escuro garante legibilidade sobre qualquer imagem */
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.7);
 }
 
 /* Fallback: célula sem imagem mostra os textos normalmente */
@@ -253,39 +227,45 @@
 }
 
 /* ============================================================
-   ESTADO: CHOSEN-MINE (adotado por mim)
+   ESTADO: CHOSEN-MINE (meus elementos)
 
-   Usa --adopted (âmbar) do main.css — cor única que não
-   conflita com nenhuma das 10 categorias de elementos.
-   
-   NÃO usa !important — a especificidade do seletor já é
-   suficiente, e !important cria cascata imprevisível quando
-   há múltiplos arquivos CSS.
-   
-   O @keyframe adoptPulse (definido em main.css) é aplicado
-   via main.css também — não repetimos aqui.
+   A imagem permanece visível. O ::after vira uma máscara
+   âmbar semitransparente que "tingue" a foto, sinalizando
+   a seleção sem apagá-la. A borda âmbar e o checkmark
+   reforçam a identidade visual do estado.
+
+   Intensidade do overlay: 55% — forte o suficiente para
+   sinalizar claramente, mas ainda deixa a foto reconhecível.
    ============================================================ */
 .element-cell.chosen-mine {
   cursor: default;
-  background: var(--adopted-dim);
   border-color: var(--adopted);
-  /* sombra interna sutil — indica "selecionado", não decorativo */
-  box-shadow: inset 0 0 10px rgba(255, 212, 59, 0.08);
+  box-shadow:
+    inset 0 0 12px rgba(255, 212, 59, 0.15),
+    0 0 8px rgba(255, 212, 59, 0.12);
 }
 
-/* Desativa o hover em elemento já meu — já está selecionado,
-   não faz sentido escalar ou mudar cor ao passar o mouse */
+/* Overlay âmbar semitransparente sobre a imagem */
+.element-cell.chosen-mine::after {
+  background: rgba(255, 212, 59, 0.55);
+  opacity: 1;
+  transition: opacity var(--dur-normal) ease;
+}
+
+/* Desativa hover — elemento já é meu, não há ação possível */
 .element-cell.chosen-mine:hover {
   transform: none;
-  box-shadow: inset 0 0 10px rgba(255, 212, 59, 0.08);
+  box-shadow:
+    inset 0 0 12px rgba(255, 212, 59, 0.15),
+    0 0 8px rgba(255, 212, 59, 0.12);
 }
 
+/* Símbolo em âmbar para consistência com a borda e o overlay */
 .element-cell.chosen-mine .cell-symbol {
   color: var(--adopted);
-  text-shadow: none; /* remove o text-shadow da categoria — âmbar já é legível */
 }
 
-/* Checkmark no canto — pequeno, discreto, informativo */
+/* Checkmark no canto superior direito */
 .element-cell.chosen-mine::before {
   content: '✓';
   position: absolute;
@@ -294,35 +274,43 @@
   font-size: 8px;
   color: var(--adopted);
   font-weight: 700;
-  z-index: 6; /* acima de tudo, incluindo ::after de brilho */
+  /* z-index:6 — mesmo nível dos textos, acima do overlay ::after */
+  z-index: 6;
   line-height: 1;
+  /* text-shadow escuro para o ícone ser legível sobre o overlay */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 /* ============================================================
-   ESTADO: CHOSEN-OTHER (adotado por outro aluno)
+   ESTADO: CHOSEN-OTHER (elementos de outros alunos)
 
-   O ::after pseudo-elemento do estado base (brilho de hover)
-   precisa ser sobrescrito aqui para não aparecer no hover
-   de células tomadas — que não deveriam ter hover algum.
-   
-   O overlay escuro fica em main.css via .element-cell.chosen-other::after
-   Aqui tratamos apenas o comportamento específico da célula.
+   A imagem permanece visível, mas com uma máscara escura
+   mais intensa (70%) — mais opaca que a do chosen-mine para
+   sinalizar "bloqueado" sem ser agressiva.
+
+   O cursor not-allowed e a ausência de hover completam
+   o feedback de que não há interação disponível.
    ============================================================ */
 .element-cell.chosen-other {
   cursor: not-allowed;
-  /* Desativa todas as interações visuais de hover */
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+/* Overlay escuro semitransparente — mais denso que o chosen-mine */
+.element-cell.chosen-other::after {
+  background: rgba(0, 0, 0, 0.70);
+  opacity: 1;
+  transition: opacity var(--dur-normal) ease;
+}
+
+/* Nenhum hover visual — célula bloqueada não reage */
+.element-cell.chosen-other:hover {
   transform: none;
   box-shadow: none;
 }
 
-/* Sobrescreve o ::after de brilho para células tomadas —
-   o main.css vai definir o overlay escuro neste seletor,
-   então aqui garantimos que o brilho de hover não apareça */
-.element-cell.chosen-other:hover::after {
-  opacity: 0;
-}
-
-/* Ícone de "ocupado" — aparece quando a imagem some */
+/* Ícone de bloqueado centralizado, acima do overlay */
 .element-cell.chosen-other::before {
   content: '⊗';
   position: absolute;
@@ -330,27 +318,18 @@
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 16px;
-  color: var(--text-dim);  /* cinza neutro — não vermelho alarmista */
+  color: rgba(255, 255, 255, 0.5);
   z-index: 6;
-  opacity: 0.5;
   pointer-events: none;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
 }
 
 /* ============================================================
    SHAKE (elemento indisponível / limite atingido)
-
-   O @keyframe shake está definido em main.css.
-   Aqui só aplicamos a animação e o feedback de borda.
-   
-   Nota: NÃO redefinimos @keyframes shake aqui — havia
-   duplicação com main.css que foi removida. O browser usa
-   a última definição encontrada, o que causava inconsistência.
    ============================================================ */
 .element-cell.shake {
   animation: shake 0.32s ease both;
   border-color: var(--danger);
-  /* Sem !important — a especificidade deste seletor
-     já vence as cores de categoria normais */
 }
 
 /* ============================================================
