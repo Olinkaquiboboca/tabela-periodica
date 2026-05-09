@@ -32,8 +32,8 @@ async function generatePDF(elementNumbers, studentName, sessionCode) {
 
   const PAGE_W   = 210;
   const PAGE_H   = 297;
-  const MARGIN   = 12;  // mm de margem lateral e entre células
-  const FOOTER_H = 10;  // mm reservados para o rodapé
+  const MARGIN   = 3;  // mm de margem lateral e entre células
+  const FOOTER_H = 0;  // mm reservados para o rodapé
 
   // Célula de imagem: metade da página menos margens.
   // CELL_W × CELL_H define o bounding box máximo de cada imagem —
